@@ -1,20 +1,35 @@
-############################
-# STEP 1 build executable binary
-############################
 FROM golang:alpine AS builder
 
-WORKDIR /src
-COPY ./src .
+# Set necessary environmet variables needed for our image
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
-RUN go build -o /go/bin/main
+# Move to working directory /build
+WORKDIR /build
 
-############################
-# STEP 2 build a small image
-############################
+# Copy and download dependency using go mod
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+# Copy the code into the container
+COPY . .
+
+# Build the application
+RUN go build -o main .
+
+# Move to /dist directory as the place for resulting binary folder
+WORKDIR /dist
+
+# Copy binary from build to main folder
+RUN cp /build/main .
+
+# Build a small image
 FROM scratch
 
-COPY --from=builder /go/bin/main /go/bin/main
+COPY --from=builder /dist/main /
 
-EXPOSE 8000
-
-ENTRYPOINT ["/go/bin/main"]
+# Command to run
+ENTRYPOINT ["/main"]

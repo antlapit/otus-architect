@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otus-architect
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: otus-architect
+  template:
+    metadata:
+      labels:
+        app: otus-architect
+    spec:
+      containers:
+        - name: otus-architect
+          image: antlapit/otus-architect:v1
+          ports:
+            - name: web
+              containerPort: 8000
