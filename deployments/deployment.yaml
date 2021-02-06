@@ -3,14 +3,14 @@ kind: Deployment
 metadata:
   name: otus-architect
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
-      app: otus-architect
+      app: otus-architect-app
   template:
     metadata:
       labels:
-        app: otus-architect
+        app: otus-architect-app
     spec:
       containers:
         - name: otus-architect
@@ -18,3 +18,17 @@ spec:
           ports:
             - name: web
               containerPort: 8000
+          livenessProbe:
+            httpGet:
+              port: 8000
+              path: /health
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /health
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
