@@ -1,8 +1,13 @@
 package users
 
-import "fmt"
+import (
+	"database/sql"
+	"fmt"
+	"strconv"
+)
 
 type UserData struct {
+	Id        string `json:"id"`
 	Username  string `json:"username" binding:"required"`
 	FirstName string `json:"firstName" binding:"required"`
 	LastName  string `json:"lastName" binding:"required"`
@@ -11,25 +16,96 @@ type UserData struct {
 }
 
 type UserNotFound struct {
-	userId int
+	userId int64
 }
 
 func (error *UserNotFound) Error() string {
-	return fmt.Sprintf("Пользователь с ИД %q не найден", error.userId)
+	return fmt.Sprintf("Пользователь с ИД %s не найден", strconv.FormatInt(error.userId, 10))
 }
 
-func Create(userData UserData) (int, error) {
-	return 0, nil
+type Repository struct {
+	DB *sql.DB
 }
 
-func Get(userId int) (UserData, error) {
-	return UserData{}, nil
+func (repository *Repository) Create(userData UserData) (int64, error) {
+	db := repository.DB
+	stmt, err := db.Prepare("INSERT INTO users(username, first_name, last_name, email, phone) VALUES($1, $2, $3, $4, $5)")
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(userData.Username, userData.FirstName, userData.LastName, userData.Email, userData.Phone)
+	if err != nil {
+		return 0, err
+	}
+	lastId, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return lastId, err
 }
 
-func Delete(userId int) (bool, error) {
-	return true, nil
+func (repository *Repository) Get(userId int64) (UserData, error) {
+	db := repository.DB
+	stmt, err := db.Prepare("select id, username, first_name, last_name, email, phone from users where id = $1")
+	if err != nil {
+		return UserData{}, &UserNotFound{userId: userId}
+	}
+	defer stmt.Close()
+
+	var userData UserData
+	err = stmt.QueryRow(userId).Scan(&userData.Id, &userData.Username, &userData.FirstName, &userData.LastName, &userData.Email, &userData.Phone)
+	if err != nil {
+		return UserData{}, err
+	}
+
+	return userData, nil
 }
 
-func Update(userId int, userData UserData) (bool, error) {
-	return true, nil
+func (repository *Repository) Delete(userId int64) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare("DELETE FROM users WHERE id = $1")
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(userId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	} else if affectedRows == 0 {
+		return false, &UserNotFound{userId: userId}
+	} else {
+		return true, nil
+	}
+}
+
+func (repository *Repository) Update(userId int64, userData UserData) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare("UPDATE users SET username = $1, first_name = $2, last_name = $3, email = $4, phone = $5 WHERE id = $6")
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(userData.Username, userData.FirstName, userData.LastName, userData.Email, userData.Phone, userId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	} else if affectedRows == 0 {
+		return false, &UserNotFound{userId: userId}
+	} else {
+		return true, nil
+	}
 }

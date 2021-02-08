@@ -6,9 +6,7 @@ Homework Otus Architect
 * манифесты находятся в каталоге **deployments**
 * запуск командой **kubectl apply -f deployments**
 
-## Вызовы API /health/
+## API
 * в каталоге **examples** есть Postman коллекция
-* Get Status (local) для вызова локально запущеного сервиса
-* Get Status (k8s) для вызова сервиса в k8s (для корректной работы требуется явно передавать хост arch.homework в curl или прописать его в hosts)
-
+* в коллекции есть 2 каталога: Local (для локальной разработки) и K8s (для kubernetes - для корректной работы требуется явно передавать хост arch.homework в curl или прописать его в hosts)
 

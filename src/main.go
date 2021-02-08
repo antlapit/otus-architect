@@ -3,16 +3,38 @@ package main
 import (
 	"antlapit/otus-architect/users"
 	"antlapit/otus-architect/utils"
+	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
+	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
 	engine := gin.Default()
 
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName)
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var repository = users.Repository{DB: db}
+
 	initTechResources(engine)
-	initUsersApi(engine)
+	initUsersApi(engine, &repository)
 
 	engine.Run(":8000")
 }
@@ -25,24 +47,32 @@ func initTechResources(engine *gin.Engine) {
 	})
 }
 
-func initUsersApi(engine *gin.Engine) {
+func initUsersApi(engine *gin.Engine, repository *users.Repository) {
 	rootUserRoute := engine.Group("/user")
 	rootUserRoute.Use(errorHandler)
 
-	rootUserRoute.POST("", userDataExtractor, createUser)
+	rootUserRoute.POST("", userDataExtractor, func(context *gin.Context) {
+		createUser(context, repository)
+	})
 
 	singleUserRoute := rootUserRoute.Group("/:id")
 	singleUserRoute.Use(userIdExtractor, responseSerializer)
-	singleUserRoute.GET("", getUser)
-	singleUserRoute.DELETE("", deleteUser)
-	singleUserRoute.PUT("", userDataExtractor, updateUser)
+	singleUserRoute.GET("", func(context *gin.Context) {
+		getUser(context, repository)
+	})
+	singleUserRoute.DELETE("", func(context *gin.Context) {
+		deleteUser(context, repository)
+	})
+	singleUserRoute.PUT("", userDataExtractor, func(context *gin.Context) {
+		updateUser(context, repository)
+	})
 }
 
 // Извлечение ИД пользователя из URL
 func userIdExtractor(context *gin.Context) {
-	id, err := utils.GetPathInt(context, "id")
+	id, err := utils.GetPathInt64(context, "id")
 	if err != nil {
-		utils.AbortErrorResponse(context, http.StatusBadRequest, err)
+		utils.AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
 	}
 	context.Set("userId", id)
 
@@ -53,7 +83,7 @@ func userIdExtractor(context *gin.Context) {
 func userDataExtractor(context *gin.Context) {
 	var user users.UserData
 	if err := context.ShouldBindJSON(&user); err != nil {
-		utils.AbortErrorResponse(context, http.StatusBadRequest, err)
+		utils.AbortErrorResponse(context, http.StatusBadRequest, err, "DA02")
 	} else {
 		context.Set("userData", user)
 	}
@@ -66,48 +96,53 @@ func errorHandler(context *gin.Context) {
 
 	err := context.Errors.Last()
 	if err != nil {
-		if (errors.Is(err, &users.UserNotFound{})) {
-			utils.ErrorResponse(context, http.StatusNotFound, err)
+		if (errors.Is(err.Err, &users.UserNotFound{})) {
+			utils.ErrorResponse(context, http.StatusNotFound, err, "BL01")
 		} else {
-			utils.ErrorResponse(context, http.StatusInternalServerError, err)
+			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
 		}
-		context.Abort()
 	}
 }
 
 func responseSerializer(context *gin.Context) {
 	context.Next()
 
-	res := context.MustGet("result")
-	context.JSON(http.StatusOK, res)
+	res, exists := context.Get("result")
+	if exists {
+		context.JSON(http.StatusOK, res)
+	}
 }
 
-func updateUser(context *gin.Context) {
-	userId := context.GetInt("userId")
+func updateUser(context *gin.Context, repository *users.Repository) {
+	userId := context.GetInt64("userId")
 	userData := context.MustGet("userData").(users.UserData)
-	res, err := users.Update(userId, userData)
+	res, err := repository.Update(userId, userData)
 
 	if err != nil {
 		context.Error(err)
 	} else {
-		context.Set("result", res)
+		context.Set("result", gin.H{
+			"success": res,
+		})
 	}
 }
 
-func deleteUser(context *gin.Context) {
-	userId := context.GetInt("userId")
-	res, err := users.Delete(userId)
+func deleteUser(context *gin.Context, repository *users.Repository) {
+	userId := context.GetInt64("userId")
+	res, err := repository.Delete(userId)
 
 	if err != nil {
 		context.Error(err)
 	} else {
-		context.Set("result", res)
+		context.Set("result", gin.H{
+			"success": res,
+		})
 	}
 }
 
-func getUser(context *gin.Context) {
-	userId := context.GetInt("userId")
-	user, err := users.Get(userId)
+func getUser(context *gin.Context, repository *users.Repository) {
+	userId := context.GetInt64("userId")
+	user, err := repository.Get(userId)
 
 	if err != nil {
 		context.Error(err)
@@ -117,10 +152,10 @@ func getUser(context *gin.Context) {
 
 }
 
-func createUser(context *gin.Context) {
+func createUser(context *gin.Context, repository *users.Repository) {
 	userData := context.MustGet("userData").(users.UserData)
 
-	id, err := users.Create(userData)
+	id, err := repository.Create(userData)
 
 	if err != nil {
 		context.Error(err)
