@@ -4,7 +4,6 @@ import (
 	"antlapit/otus-architect/users"
 	"antlapit/otus-architect/utils"
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -96,10 +95,19 @@ func errorHandler(context *gin.Context) {
 
 	err := context.Errors.Last()
 	if err != nil {
-		if (errors.Is(err.Err, &users.UserNotFound{})) {
-			utils.ErrorResponse(context, http.StatusNotFound, err, "BL01")
+		if err.Meta != nil {
+			realError := err.Meta.(error)
+			switch realError.(type) {
+			case *users.UserNotFoundError:
+				utils.ErrorResponse(context, http.StatusNotFound, err, "BL01")
+				break
+			case *users.UserInvalidError:
+				utils.ErrorResponse(context, http.StatusConflict, err, "BL02")
+			default:
+				utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
+			}
 		} else {
-			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
+			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
 		}
 	}
 }
@@ -119,7 +127,7 @@ func updateUser(context *gin.Context, repository *users.Repository) {
 	res, err := repository.Update(userId, userData)
 
 	if err != nil {
-		context.Error(err)
+		context.Error(err).SetMeta(err)
 	} else {
 		context.Set("result", gin.H{
 			"success": res,
@@ -132,7 +140,7 @@ func deleteUser(context *gin.Context, repository *users.Repository) {
 	res, err := repository.Delete(userId)
 
 	if err != nil {
-		context.Error(err)
+		context.Error(err).SetMeta(err)
 	} else {
 		context.Set("result", gin.H{
 			"success": res,
@@ -145,7 +153,7 @@ func getUser(context *gin.Context, repository *users.Repository) {
 	user, err := repository.Get(userId)
 
 	if err != nil {
-		context.Error(err)
+		context.Error(err).SetMeta(err)
 	} else {
 		context.Set("result", user)
 	}
@@ -158,7 +166,7 @@ func createUser(context *gin.Context, repository *users.Repository) {
 	id, err := repository.Create(userData)
 
 	if err != nil {
-		context.Error(err)
+		context.Error(err).SetMeta(err)
 	} else {
 		context.JSON(http.StatusCreated, gin.H{
 			"id": id,
