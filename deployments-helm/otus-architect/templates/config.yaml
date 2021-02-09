@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otus-architect-config
+data:
+  DB_HOST: {{ .Values.postgres.host | quote }}
+  DB_PORT: {{ .Values.postgres.port | quote }}
+  DB_NAME: {{ .Values.postgres.name | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: otus-architect-secret
+type: Opaque
+data:
+  DB_USER: {{ .Values.postgres.user | b64enc | quote }}
+  DB_PASSWORD: {{ .Values.postgres.password | b64enc | quote }}
