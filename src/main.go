@@ -12,17 +12,29 @@ import (
 	"os"
 )
 
+type DatabaseConfig struct {
+	host     string
+	port     string
+	user     string
+	password string
+	name     string
+}
+
 func main() {
 	engine := gin.Default()
 
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
+	config := DatabaseConfig{
+		host:     os.Getenv("DB_HOST"),
+		port:     os.Getenv("DB_PORT"),
+		user:     os.Getenv("DB_USER"),
+		password: os.Getenv("DB_PASSWORD"),
+		name:     os.Getenv("DB_NAME"),
+	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
+		config.host, config.port, config.user, config.password, config.name)
+
+	fmt.Println(psqlInfo)
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
@@ -32,16 +44,25 @@ func main() {
 
 	var repository = users.Repository{DB: db}
 
-	initTechResources(engine)
+	initTechResources(engine, &config)
 	initUsersApi(engine, &repository)
 
 	engine.Run(":8000")
 }
 
-func initTechResources(engine *gin.Engine) {
+func initTechResources(engine *gin.Engine, config *DatabaseConfig) {
 	engine.GET("/health", func(context *gin.Context) {
 		context.JSON(200, gin.H{
 			"status": "OK",
+		})
+	})
+	engine.GET("/db", func(context *gin.Context) {
+		context.JSON(200, gin.H{
+			"host":     config.host,
+			"port":     config.port,
+			"user":     config.user,
+			"password": config.password,
+			"name":     config.name,
 		})
 	})
 }
