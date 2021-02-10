@@ -41,12 +41,15 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-postgres:
-  host: postgres
-  port: 5432
-  name: otus-architect
-  user: otus-architect
-  password: _ky62W9An32QMXPZ
+postgresql:
+  enabled: true
+  postgresqlDatabase: otus-architect
+  postgresqlUsername: otus-architect
+  postgresqlPassword: _ky62W9An32QMXPZ
+  service:
+    port: "5432"
+  persistence:
+    size: 256Mi
 
 health:
   path: /health

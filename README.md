@@ -8,7 +8,9 @@ Homework Otus Architect
 
 ## Развертывание через helm
 * `helm install otus-architect-release ./deployments-helm/otus-architect`
-    * релиз включает развеотывание сервиса 
+    * релиз включает развертывание postgresql из официального чарта
+    * развертывание сервиса
+    * выполнение стартовых миграций
 
 ## Устарело
 ### Манифесты для k8s
