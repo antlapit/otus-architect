@@ -1,0 +1,60 @@
+replicaCount: 3
+
+image:
+  repository: antlapit/otus-architect
+  pullPolicy: IfNotPresent
+  tag: "v3"
+
+nameOverride: "otus-architect"
+fullnameOverride: "otus-architect"
+
+service:
+  type: NodePort
+  port: 8000
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  hosts:
+  - host: arch.homework
+    paths:
+    - path: /otusapp/alapitskii($|/)(.*)
+      pathType: Prefix
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+postgresql:
+  enabled: true
+  postgresqlPostgresPassword: postgres
+  postgresqlDatabase: otus-architect
+  postgresqlUsername: otus-architect
+  postgresqlPassword: _ky62W9An32QMXPZ
+  service:
+    type: NodePort
+    port: "5432"
+  persistence:
+    size: 256Mi
+
+health:
+  path: /health
+  initialDelay: 10
+  periodSeconds: 5
+  timeoutSeconds: 2

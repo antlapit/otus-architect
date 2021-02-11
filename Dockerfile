@@ -10,12 +10,12 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY go.mod .
-COPY go.sum .
+COPY src/go.mod .
+COPY src/go.sum .
 RUN go mod download
 
 # Copy the code into the container
-COPY . .
+COPY src .
 
 # Build the application
 RUN go build -o main .
@@ -30,6 +30,8 @@ RUN cp /build/main .
 FROM scratch
 
 COPY --from=builder /dist/main /
+
+COPY migrations /migrations
 
 # Command to run
 ENTRYPOINT ["/main"]
