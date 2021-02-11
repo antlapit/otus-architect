@@ -3,7 +3,7 @@ replicaCount: 3
 image:
   repository: antlapit/otus-architect
   pullPolicy: IfNotPresent
-  tag: "v2"
+  tag: "v3"
 
 nameOverride: "otus-architect"
 fullnameOverride: "otus-architect"
@@ -43,10 +43,12 @@ autoscaling:
 
 postgresql:
   enabled: true
+  postgresqlPostgresPassword: postgres
   postgresqlDatabase: otus-architect
   postgresqlUsername: otus-architect
   postgresqlPassword: _ky62W9An32QMXPZ
   service:
+    type: NodePort
     port: "5432"
   persistence:
     size: 256Mi

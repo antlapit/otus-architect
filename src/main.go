@@ -6,10 +6,15 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	. "github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type DatabaseConfig struct {
@@ -21,9 +26,9 @@ type DatabaseConfig struct {
 }
 
 func main() {
-	engine := gin.Default()
+	serviceMode := os.Getenv("SERVICE_MODE")
 
-	config := DatabaseConfig{
+	config := &DatabaseConfig{
 		host:     os.Getenv("DB_HOST"),
 		port:     os.Getenv("DB_PORT"),
 		user:     os.Getenv("DB_USER"),
@@ -31,23 +36,54 @@ func main() {
 		name:     os.Getenv("DB_NAME"),
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.host, config.port, config.user, config.password, config.name)
+	db, driver := initDatabase(config)
 
-	fmt.Println(psqlInfo)
+	if serviceMode == "INIT" {
+		migrateDb(driver)
+	} else {
+		var repository = users.Repository{DB: db}
 
-	db, err := sql.Open("postgres", psqlInfo)
+		engine := gin.Default()
+		initTechResources(engine, config)
+		initUsersApi(engine, &repository)
+		engine.Run(":8000")
+	}
+}
+
+func migrateDb(driver database.Driver) {
+	m, err := NewWithDatabaseInstance("file://migrations", "postgres", driver)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
-	var repository = users.Repository{DB: db}
+	err = m.Up()
+	if err != nil {
+		switch err.Error() {
+		case ErrNoChange.Error(), ErrNilVersion.Error(), ErrLockTimeout.Error():
+			return
+		}
+		log.Fatal(err)
+	}
+}
 
-	initTechResources(engine, &config)
-	initUsersApi(engine, &repository)
+func initDatabase(config *DatabaseConfig) (*sql.DB, database.Driver) {
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		config.host, config.port, config.user, config.password, config.name)
+	fmt.Println(psqlInfo)
 
-	engine.Run(":8000")
+	var db *sql.DB
+	var err error
+	var driver database.Driver
+	db, err = sql.Open("postgres", psqlInfo)
+	for {
+		driver, err = postgres.WithInstance(db, &postgres.Config{})
+		if err == nil {
+			break
+		} else {
+			time.Sleep(2 * time.Second)
+		}
+	}
+	return db, driver
 }
 
 func initTechResources(engine *gin.Engine, config *DatabaseConfig) {

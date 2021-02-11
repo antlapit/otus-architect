@@ -31,5 +31,7 @@ FROM scratch
 
 COPY --from=builder /dist/main /
 
+COPY migrations /migrations
+
 # Command to run
 ENTRYPOINT ["/main"]

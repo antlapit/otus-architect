@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: otus-architect
-          image: antlapit/otus-architect:v2
+          image: antlapit/otus-architect:v3
           ports:
             - name: web
               containerPort: 8000
