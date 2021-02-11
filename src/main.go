@@ -161,7 +161,7 @@ func errorHandler(context *gin.Context) {
 			case *users.UserInvalidError:
 				utils.ErrorResponse(context, http.StatusConflict, err, "BL02")
 			default:
-				utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
+				utils.ErrorResponse(context, http.StatusConflict, err, "FA01")
 			}
 		} else {
 			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
