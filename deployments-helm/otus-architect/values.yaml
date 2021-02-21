@@ -3,7 +3,7 @@ replicaCount: 3
 image:
   repository: antlapit/otus-architect
   pullPolicy: IfNotPresent
-  tag: "v4"
+  tag: "v5"
 
 nameOverride: "otus-architect"
 fullnameOverride: "otus-architect"
@@ -58,3 +58,7 @@ health:
   initialDelay: 10
   periodSeconds: 5
   timeoutSeconds: 2
+
+metrics:
+  serviceMonitor:
+    enabled: true

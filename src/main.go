@@ -11,9 +11,14 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -101,11 +106,26 @@ func initTechResources(engine *gin.Engine, config *DatabaseConfig) {
 			"name":     config.name,
 		})
 	})
+
+	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
 }
+
+var (
+	metricRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "otus_architect_requests_total",
+		Help: "The total number of processed requests",
+	}, []string{"url", "method", "status"})
+
+	metricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "otus_architect_requests_latency",
+		Help:    "Latency of processed requests",
+		Buckets: prometheus.DefBuckets,
+	}, []string{"url", "method", "status"})
+)
 
 func initUsersApi(engine *gin.Engine, repository *users.Repository) {
 	rootUserRoute := engine.Group("/user")
-	rootUserRoute.Use(errorHandler)
+	rootUserRoute.Use(metrics, errorHandler)
 
 	rootUserRoute.POST("", userDataExtractor, func(context *gin.Context) {
 		createUser(context, repository)
@@ -167,6 +187,22 @@ func errorHandler(context *gin.Context) {
 			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
 		}
 	}
+}
+
+func metrics(context *gin.Context) {
+	start := time.Now()
+	url := context.Request.URL.String()
+	for _, p := range context.Params {
+		url = strings.Replace(url, p.Value, ":"+p.Key, 1)
+	}
+	method := context.Request.Method
+	context.Next()
+
+	status := strconv.Itoa(context.Writer.Status())
+	elapsed := float64(time.Since(start)) / float64(time.Second)
+
+	metricRequests.WithLabelValues(url, method, status).Inc()
+	metricLatency.WithLabelValues(url, method, status).Observe(elapsed)
 }
 
 func responseSerializer(context *gin.Context) {

@@ -17,6 +17,13 @@ Homework Otus Architect
   * в БД создается 1 запись о пользователе с id = 1
   * докер образ для job и сервиса один
   
+## Prometheus & Grafana
+* установка Prometheus `helm install prom prometheus-community/kube-prometheus-stack -f deployments/prometheus.yaml --atomic`
+* форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`
+* dashboard grafana http://localhost:9000
+* логин/пароль - admin/prom-operator
+* форвардинг портов prometheus `kubectl port-forward service/prom-prometheus-operator-prometheus 9090`
+
 
 ## Устарело
 ### Манифесты для k8s
