@@ -24,9 +24,5 @@ Homework Otus Architect
 * логин/пароль - admin/prom-operator
 * форвардинг портов prometheus `kubectl port-forward service/prom-prometheus-operator-prometheus 9090`
 
-
-## Устарело
-### Манифесты для k8s
-* манифесты находятся в каталоге **deployments**
-* запуск командой **kubectl apply -f deployments**
-
+### Метрики с nginx
+* обновление стандартного nginx `helm install nginx stable/nginx-ingress -f deployments/nginx-ingress.yaml`

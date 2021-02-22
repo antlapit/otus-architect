@@ -120,7 +120,7 @@ var (
 		Name:    "otus_architect_requests_latency",
 		Help:    "Latency of processed requests",
 		Buckets: prometheus.DefBuckets,
-	}, []string{"url", "method", "status"})
+	}, []string{"url", "method"})
 )
 
 func initUsersApi(engine *gin.Engine, repository *users.Repository) {
@@ -202,7 +202,7 @@ func metrics(context *gin.Context) {
 	elapsed := float64(time.Since(start)) / float64(time.Second)
 
 	metricRequests.WithLabelValues(url, method, status).Inc()
-	metricLatency.WithLabelValues(url, method, status).Observe(elapsed)
+	metricLatency.WithLabelValues(url, method).Observe(elapsed)
 }
 
 func responseSerializer(context *gin.Context) {

@@ -20,12 +20,12 @@ func ErrorResponse(context *gin.Context, status int, err error, code string) {
 		"code":    code,
 		"message": err.Error(),
 	})
-	log.Panic(err)
+	log.Println(err)
 }
 func AbortErrorResponse(context *gin.Context, status int, err error, code string) {
 	context.AbortWithStatusJSON(status, gin.H{
 		"code":    code,
 		"message": err.Error(),
 	})
-	log.Panic(err)
+	log.Println(err)
 }
