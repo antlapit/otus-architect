@@ -16,9 +16,3 @@ controller:
     enabled: true
     serviceMonitor:
       enabled: true
-
-  updateStrategy:
-    type: OnDelete
-
-  admissionWebhooks:
-    enabled: false

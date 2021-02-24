@@ -114,13 +114,13 @@ var (
 	metricRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "otus_architect_requests_total",
 		Help: "The total number of processed requests",
-	}, []string{"url", "method", "status"})
+	}, []string{"apiKey", "status"})
 
 	metricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "otus_architect_requests_latency",
 		Help:    "Latency of processed requests",
 		Buckets: prometheus.DefBuckets,
-	}, []string{"url", "method"})
+	}, []string{"apiKey"})
 )
 
 func initUsersApi(engine *gin.Engine, repository *users.Repository) {
@@ -181,7 +181,7 @@ func errorHandler(context *gin.Context) {
 			case *users.UserInvalidError:
 				utils.ErrorResponse(context, http.StatusConflict, err, "BL02")
 			default:
-				utils.ErrorResponse(context, http.StatusConflict, err, "FA01")
+				utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
 			}
 		} else {
 			utils.ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
@@ -201,8 +201,9 @@ func metrics(context *gin.Context) {
 	status := strconv.Itoa(context.Writer.Status())
 	elapsed := float64(time.Since(start)) / float64(time.Second)
 
-	metricRequests.WithLabelValues(url, method, status).Inc()
-	metricLatency.WithLabelValues(url, method).Observe(elapsed)
+	apiKey := url + " " + method
+	metricRequests.WithLabelValues(apiKey, status).Inc()
+	metricLatency.WithLabelValues(apiKey).Observe(elapsed)
 }
 
 func responseSerializer(context *gin.Context) {

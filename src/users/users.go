@@ -56,7 +56,7 @@ func (repository *Repository) Get(userId int64) (UserData, error) {
 	db := repository.DB
 	stmt, err := db.Prepare("SELECT id, username, first_name, last_name, email, phone FROM users WHERE id = $1")
 	if err != nil {
-		return UserData{}, &UserNotFoundError{userId: userId}
+		return UserData{}, err
 	}
 	defer stmt.Close()
 
@@ -108,7 +108,7 @@ func (repository *Repository) Update(userId int64, userData UserData) (bool, err
 	}
 	affectedRows, err := res.RowsAffected()
 	if err != nil {
-		return false, err
+		return false, &UserInvalidError{err.Error()}
 	} else if affectedRows == 0 {
 		return false, &UserNotFoundError{userId: userId}
 	} else {
