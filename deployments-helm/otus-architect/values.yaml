@@ -52,6 +52,8 @@ postgresql:
     port: "5432"
   persistence:
     size: 256Mi
+  postgresqlExtendedConf:
+    sharedPreloadLibraries: 'pg_stat_statements'
 
 health:
   path: /health

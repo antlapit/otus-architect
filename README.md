@@ -25,7 +25,7 @@ Homework Otus Architect
 * форвардинг портов prometheus `kubectl port-forward service/prom-prometheus-operator-prometheus 9090`
 
 ### Дашборд Grafana
-Дашборд находится в `grafana/dashboard.json`
+Основной Dashboard - `grafana/dashboard.json`
 
 Содержимое дашборда
 * метрики с сервиса
@@ -36,15 +36,32 @@ Homework Otus Architect
   * Latency по квантилям 0.5, 0.95, 0.99, 1.0 (+ alert-ы в Telegram)
   * 5xx ошибки (+ alert-ы в Telegram)
   * RPS
-* метрики Postgres  
 * CPU и Memory по pod-ам 
+
+Метрики PostgreSQL - `grafana/dashboard_postgresql.json`
 
 ### Стресс-тестирование
 * одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`
 * для проверки 5хх ошибок во время тестирования имитировал "падение" БД
+
+API сервиса
+![API сервиса](./load-testing/grafana_api.png)
+
+Ingress Nginx
+![Ingress Nginx](./load-testing/grafana_nginx.png)
+
+PostgreSQL
+![PostgreSQL](./load-testing/grafana_postgresql.png)
+
+CPU & Memory
+![CPU & Memory](./load-testing/grafana_resources.png)
+
+Алерты в Telegram
+![Алерты в Telegram](./load-testing/telegram_alert.png)
 
 
 ### Метрики с nginx
 * обновление стандартного nginx `helm install nginx ingress-nginx/ingress-nginx -f deployments/nginx-ingress.yaml`
 
 ### Метрики с Postgres
+* установка postgresql-exporter - `helm install postgres-exporter prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter.yaml`
