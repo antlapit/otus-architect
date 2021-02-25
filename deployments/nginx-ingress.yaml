@@ -16,3 +16,4 @@ controller:
     enabled: true
     serviceMonitor:
       enabled: true
+      scrapeInterval: 15s

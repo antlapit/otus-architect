@@ -24,5 +24,27 @@ Homework Otus Architect
 * логин/пароль - admin/prom-operator
 * форвардинг портов prometheus `kubectl port-forward service/prom-prometheus-operator-prometheus 9090`
 
+### Дашборд Grafana
+Дашборд находится в `grafana/dashboard.json`
+
+Содержимое дашборда
+* метрики с сервиса
+  * Latency по квантилям 0.5, 0.95, 0.99, 1.0 с разбивкой по методам API
+  * 5xx ошибки с разбивкой по методам API
+  * RPS с разбивкой по методам API
+* метрики с nginx
+  * Latency по квантилям 0.5, 0.95, 0.99, 1.0 (+ alert-ы в Telegram)
+  * 5xx ошибки (+ alert-ы в Telegram)
+  * RPS
+* метрики Postgres  
+* CPU и Memory по pod-ам 
+
+### Стресс-тестирование
+* одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`
+* для проверки 5хх ошибок во время тестирования имитировал "падение" БД
+
+
 ### Метрики с nginx
-* обновление стандартного nginx `helm install nginx stable/nginx-ingress -f deployments/nginx-ingress.yaml`
+* обновление стандартного nginx `helm install nginx ingress-nginx/ingress-nginx -f deployments/nginx-ingress.yaml`
+
+### Метрики с Postgres
