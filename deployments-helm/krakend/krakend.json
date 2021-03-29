@@ -1,0 +1,203 @@
+{
+  "version": 2,
+  "name": "Users Gateway",
+  "port": 8080,
+  "cache_ttl": "3600s",
+  "timeout": "3s",
+  "extra_config": {
+    "github_com/devopsfaith/krakend-gologging": {
+      "level": "DEBUG",
+      "prefix": "[KRAKEND]",
+      "syslog": true,
+      "stdout": true
+    },
+    "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+      "interval": 60,
+      "timeout": 10,
+      "maxErrors": 1
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/health",
+      "extra_config": {
+        "github.com/devopsfaith/krakend/proxy": {
+          "static": {
+            "data": {
+              "status": "OK"
+            },
+            "strategy": "always"
+          }
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/",
+          "host": [
+            "http://fake-backend"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/login",
+      "method": "POST",
+      "headers_to_pass": [
+        "*"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://auth-service:8001"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/login"
+        }
+      ]
+    },
+    {
+      "endpoint": "/register/init",
+      "method": "POST",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://auth-service:8001"
+          ],
+          "encoding": "json",
+          "url_pattern": "/register"
+        }
+      ]
+    },
+    {
+      "endpoint": "/register/confirm",
+      "method": "POST",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://user-profile-service:8000"
+          ],
+          "method": "POST",
+          "encoding": "json",
+          "url_pattern": "/user/{JWT.sub}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/refresh-token",
+      "method": "GET",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://auth-service:8001"
+          ],
+          "encoding": "json",
+          "url_pattern": "/refresh-token"
+        }
+      ]
+    },
+    {
+      "endpoint": "/change-password",
+      "method": "POST",
+      "headers_to_pass": [
+        "*"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://auth-service:8001"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/change-password"
+        }
+      ]
+    },
+    {
+      "endpoint": "/profile",
+      "method": "GET",
+      "output_encoding": "json",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://user-profile-service:8000"
+          ],
+          "encoding": "json",
+          "url_pattern": "/user/{JWT.sub}"
+        },
+        {
+          "host": [
+            "http://auth-service:8001"
+          ],
+          "encoding": "json",
+          "url_pattern": "/me"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/profile",
+      "method": "PUT",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://user-profile-service:8000"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/user/{JWT.sub}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    }
+  ]
+}

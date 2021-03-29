@@ -15,7 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 25,
+  "id": 26,
+  "iteration": 1615463652774,
   "links": [],
   "panels": [
     {
@@ -29,13 +30,6 @@
       "id": 10,
       "panels": [],
       "repeat": "apiKey",
-      "scopedVars": {
-        "apiKey": {
-          "selected": true,
-          "text": "/user/:id GET",
-          "value": "/user/:id GET"
-        }
-      },
       "title": "API Metrics",
       "type": "row"
     },
@@ -77,24 +71,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "apiKey": {
-          "selected": true,
-          "text": "/user/:id GET",
-          "value": "/user/:id GET"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.5, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket{service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -181,24 +168,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "apiKey": {
-          "selected": true,
-          "text": "/user/:id GET",
-          "value": "/user/:id GET"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.95, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket{service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -285,7 +265,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -295,7 +275,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.99, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket{service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -382,7 +362,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -392,7 +372,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(1.0, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(1.0, sum by (apiKey, le) (rate(otus_architect_requests_latency_bucket{service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -479,24 +459,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "apiKey": {
-          "selected": true,
-          "text": "/user/:id GET",
-          "value": "/user/:id GET"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (apiKey) (rate(otus_architect_requests_total[1m])) \n",
+          "expr": "sum by (apiKey) (rate(otus_architect_requests_total{service=\"$service\"}[1m])) \n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -588,24 +561,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "apiKey": {
-          "selected": true,
-          "text": "/user/:id GET",
-          "value": "/user/:id GET"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (apiKey) (increase(otus_architect_requests_total{status=~\"5..\"}[1m])) \n",
+          "expr": "sum by (apiKey) (increase(otus_architect_requests_total{service=\"$service\",status=~\"5..\"}[1m])) \n",
           "interval": "",
           "legendFormat": "{{apiKey}}",
           "refId": "A"
@@ -747,7 +713,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -757,7 +723,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{exported_service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "Total Latency",
           "refId": "A"
@@ -893,7 +859,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -903,7 +869,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{exported_service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "Total Latency",
           "refId": "A"
@@ -1039,7 +1005,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1049,7 +1015,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{exported_service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "Total Latency",
           "refId": "A"
@@ -1185,7 +1151,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1195,7 +1161,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(1.0, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[1m]))) * 1000\n",
+          "expr": "histogram_quantile(1.0, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{exported_service=\"$service\"}[1m]))) * 1000\n",
           "interval": "",
           "legendFormat": "Total Latency",
           "refId": "A"
@@ -1291,7 +1257,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1301,7 +1267,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate(nginx_ingress_controller_request_duration_seconds_count[1m])) \n",
+          "expr": "sum (rate(nginx_ingress_controller_request_duration_seconds_count{exported_service=\"$service\"}[1m])) \n",
           "interval": "",
           "legendFormat": "Total RPS",
           "refId": "A"
@@ -1433,7 +1399,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1443,7 +1409,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (status) (increase(nginx_ingress_controller_request_duration_seconds_count{status=~\"5..\"}[1m])) \n",
+          "expr": "sum by (status) (increase(nginx_ingress_controller_request_duration_seconds_count{exported_service=\"$service\",status=~\"5..\"}[1m])) \n",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -1559,7 +1525,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1569,7 +1535,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod) (rate(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{pod=~\"otus-architect-.*\"}[1m])) ",
+          "expr": "sum by (pod) (rate(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{pod=~\"$service-.*\"}[1m])) ",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1662,7 +1628,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.1",
+      "pluginVersion": "7.4.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1672,7 +1638,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod) (rate(container_memory_working_set_bytes{pod=~\"otus-architect-.*\"}[1m])) ",
+          "expr": "sum by (pod) (rate(container_memory_working_set_bytes{pod=~\"$service-.*\"}[1m])) ",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1728,7 +1694,39 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "user-profile-service",
+          "value": "user-profile-service"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "service",
+        "options": [
+          {
+            "selected": true,
+            "text": "user-profile-service",
+            "value": "user-profile-service"
+          },
+          {
+            "selected": false,
+            "text": "auth-service",
+            "value": "auth-service"
+          }
+        ],
+        "query": "user-profile-service,auth-service",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
@@ -1738,5 +1736,5 @@
   "timezone": "",
   "title": "API Metrics",
   "uid": "Ii4fiFyGz",
-  "version": 10
+  "version": 4
 }
