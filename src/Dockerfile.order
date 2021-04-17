@@ -10,10 +10,10 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY user-profile-service /user-profile-service
+COPY order-service /order-service
 COPY toolbox /toolbox
 
-WORKDIR /user-profile-service
+WORKDIR /order-service
 
 RUN go mod download
 
@@ -23,7 +23,7 @@ RUN go build -o main .
 WORKDIR /dist
 
 # Copy binary from build to main folder
-RUN cp /user-profile-service/main .
+RUN cp /order-service/main .
 
 # Build a small image
 FROM scratch
@@ -31,7 +31,7 @@ FROM scratch
 COPY --from=builder /dist/main /
 
 COPY keys /keys
-COPY user-profile-service/migrations /migrations
+COPY order-service/migrations /migrations
 
 # Command to run
 ENTRYPOINT ["/main"]

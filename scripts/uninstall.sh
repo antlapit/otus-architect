@@ -7,6 +7,8 @@ helm delete nginx
 helm delete postgres-exporter-users
 helm delete postgres-exporter-auth
 
+helm delete kafka
+
 kubectl delete clusterrole nginx-ingress-nginx
 kubectl delete clusterrole prom-grafana-clusterrole
 kubectl delete clusterrole prom-kube-prometheus-stack-operator

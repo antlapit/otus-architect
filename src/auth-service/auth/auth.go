@@ -40,21 +40,28 @@ func (error *UserInvalidError) Error() string {
 	return error.message
 }
 
-func (repository *Repository) Create(userData UserData) (int64, error) {
+func (repository *Repository) CreateOrUpdate(userData UserData) (bool, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("INSERT INTO users(username, password) VALUES($1, $2) RETURNING id")
+	stmt, err := db.Prepare(
+		`INSERT INTO users(id, username, password) 
+				VALUES($1, $2, $3)
+				ON CONFLICT (id) DO UPDATE
+				SET username = $2, password = $3`,
+	)
 	if err != nil {
-		return -1, err
+		return false, err
 	}
 	defer stmt.Close()
 
-	lastId := int64(0)
-	err = stmt.QueryRow(userData.Username, userData.Password).Scan(&lastId)
+	res, err := stmt.Exec(userData.Id, userData.Username, userData.Password)
+	affectedRows, err := res.RowsAffected()
 	if err != nil {
-		return -1, &UserInvalidError{err.Error()}
+		return false, &UserInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &UserInvalidError{"Cannot create user"}
 	}
 
-	return lastId, err
+	return true, err
 }
 
 func (repository *Repository) UpdatePassword(userId int64, password string) (bool, error) {
@@ -96,4 +103,15 @@ func (repository *Repository) GetByUsername(userName string) (UserData, error) {
 	}
 
 	return userData, nil
+}
+
+func (repository *Repository) GetNextUserId() (int64, error) {
+	db := repository.DB
+	var id int64
+	err := db.QueryRow("SELECT nextval('users_id_seq')").Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+
+	return id, nil
 }

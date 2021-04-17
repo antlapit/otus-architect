@@ -30,7 +30,7 @@ FROM scratch
 
 COPY --from=builder /dist/main /
 
-COPY auth-service/keys /keys
+COPY keys /keys
 COPY auth-service/migrations /migrations
 
 # Command to run

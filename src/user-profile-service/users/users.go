@@ -34,21 +34,29 @@ type Repository struct {
 	DB *sql.DB
 }
 
-func (repository *Repository) Create(userId int64, userData UserData) (int64, error) {
+func (repository *Repository) CreateIfNotExists(userId int64) (bool, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("INSERT INTO user_profile(id, first_name, last_name, email, phone) VALUES($1, $2, $3, $4, $5) RETURNING id")
+
+	stmt, err := db.Prepare(
+		`INSERT INTO user_profile(id) 
+				VALUES($1) 
+				ON CONFLICT (id) DO NOTHING`,
+	)
 	if err != nil {
-		return -1, err
+		return false, err
 	}
 	defer stmt.Close()
 
-	lastId := int64(0)
-	err = stmt.QueryRow(userId, userData.FirstName, userData.LastName, userData.Email, userData.Phone).Scan(&lastId)
+	res, err := stmt.Exec(userId)
 	if err != nil {
-		return -1, &UserProfileInvalidError{err.Error()}
+		return false, err
 	}
-
-	return lastId, err
+	_, err = res.RowsAffected()
+	if err != nil {
+		return false, &UserProfileInvalidError{err.Error()}
+	} else {
+		return true, nil
+	}
 }
 
 func (repository *Repository) Get(userId int64) (UserData, error) {
@@ -69,39 +77,21 @@ func (repository *Repository) Get(userId int64) (UserData, error) {
 	return userData, nil
 }
 
-func (repository *Repository) Delete(userId int64) (bool, error) {
+func (repository *Repository) CreateOrUpdate(userId int64, userData UserData) (bool, error) {
 	db := repository.DB
 
-	stmt, err := db.Prepare("DELETE FROM user_profile WHERE id = $1")
+	stmt, err := db.Prepare(
+		`INSERT INTO user_profile(id, first_name, last_name, email, phone) 
+				VALUES($1, $2, $3, $4, $5) 
+				ON CONFLICT (id) DO UPDATE
+				SET first_name = $2, last_name = $3, email = $4, phone = $5`,
+	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(userId)
-	if err != nil {
-		return false, err
-	}
-	affectedRows, err := res.RowsAffected()
-	if err != nil {
-		return false, err
-	} else if affectedRows == 0 {
-		return false, &UserProfileNotFoundError{userId: userId}
-	} else {
-		return true, nil
-	}
-}
-
-func (repository *Repository) Update(userId int64, userData UserData) (bool, error) {
-	db := repository.DB
-
-	stmt, err := db.Prepare("UPDATE user_profile SET first_name = $1, last_name = $2, email = $3, phone = $4 WHERE id = $5")
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.Exec(userData.FirstName, userData.LastName, userData.Email, userData.Phone, userId)
+	res, err := stmt.Exec(userId, userData.FirstName, userData.LastName, userData.Email, userData.Phone)
 	if err != nil {
 		return false, err
 	}

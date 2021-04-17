@@ -1,49 +1,67 @@
 package main
 
 import (
+	"fmt"
+	"github.com/antlapit/otus-architect/api/event"
+	. "github.com/antlapit/otus-architect/toolbox"
+	"github.com/antlapit/otus-architect/user-profile-service/users"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	. "gitlab.com/antlapit/otus-architect/toolbox"
-	"gitlab.com/antlapit/otus-architect/user-profile-service/users"
 	"net/http"
 	"os"
 )
 
 func main() {
 	serviceMode := os.Getenv("SERVICE_MODE")
-
-	dbConfig := LoadDatabaseConfig()
-
-	db, driver := InitDatabase(dbConfig)
+	db, driver, dbConfig := InitDefaultDatabase()
 
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
 		var repository = users.Repository{DB: db}
 
-		engine, _, secureGroup, publicGroup := InitGinDefault(dbConfig)
-		initUsersApi(secureGroup, publicGroup, &repository)
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
+
+		kafka := InitKafkaDefault()
+		userEventsMarshaller := &EventMarshaller{
+			Types: event.UserEvents,
+		}
+
+		eventWriter := kafka.StartNewWriter(event.TOPIC_USERS, userEventsMarshaller)
+		initUsersApi(secureGroup, &repository, eventWriter)
+		initListeners(kafka, userEventsMarshaller, &repository)
 		engine.Run(":8000")
 	}
 }
 
-func initUsersApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, repository *users.Repository) {
-	publicRoute := publicGroup.Group("/user/:id")
-	publicRoute.POST("", errorHandler, userIdExtractor, userDataExtractor, func(context *gin.Context) {
-		createUser(context, repository)
-	})
+func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, repository *users.Repository) {
+	kafka.StartNewEventReader(event.TOPIC_USERS, "user-profile-service", marshaller,
+		func(id string, eventType string, data interface{}) {
+			processEvent(repository, id, eventType, data)
+		})
+}
 
+func processEvent(repository *users.Repository, id string, eventType string, data interface{}) {
+	fmt.Printf("Processing eventId=%s, eventType=%s", id, eventType)
+	switch data.(type) {
+	case event.UserCreated:
+		createEmptyUser(repository, data.(event.UserCreated))
+	case event.UserProfileChanged:
+		changeProfile(repository, data.(event.UserProfileChanged))
+	default:
+		fmt.Printf("Skipping event eventId=%s", id)
+	}
+}
+
+func initUsersApi(secureGroup *gin.RouterGroup, repository *users.Repository, writer *EventWriter) {
 	singleUserRoute := secureGroup.Group("/user/:id")
-	singleUserRoute.Use(userIdExtractor, checkUserPermissions, ResponseSerializer)
+	singleUserRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
 	singleUserRoute.GET("", func(context *gin.Context) {
 		getUser(context, repository)
 	})
-	singleUserRoute.DELETE("", func(context *gin.Context) {
-		deleteUser(context, repository)
-	})
-	singleUserRoute.PUT("", userDataExtractor, func(context *gin.Context) {
-		updateUser(context, repository)
+	singleUserRoute.POST("", userDataExtractor, func(context *gin.Context) {
+		submitProfileChangeEvent(context, writer)
 	})
 }
 
@@ -102,23 +120,30 @@ func errorHandler(context *gin.Context) {
 	}
 }
 
-func updateUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	userData := context.MustGet("userData").(users.UserData)
-	res, err := repository.Update(userId, userData)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.Set("result", gin.H{
-			"success": res,
-		})
-	}
+func createEmptyUser(repository *users.Repository, data event.UserCreated) {
+	repository.CreateIfNotExists(data.UserId)
 }
 
-func deleteUser(context *gin.Context, repository *users.Repository) {
+func changeProfile(repository *users.Repository, data event.UserProfileChanged) {
+	repository.CreateOrUpdate(data.UserId, users.UserData{
+		Id:        data.UserId,
+		FirstName: data.FirstName,
+		LastName:  data.LastName,
+		Email:     data.Email,
+		Phone:     data.Phone,
+	})
+}
+
+func submitProfileChangeEvent(context *gin.Context, writer *EventWriter) {
 	userId := context.GetInt64("userId")
-	res, err := repository.Delete(userId)
+	userData := context.MustGet("userData").(users.UserData)
+	res, err := writer.WriteEvent(event.EVENT_PROFILE_CHANGED, event.UserProfileChanged{
+		UserId:    userId,
+		FirstName: userData.FirstName,
+		LastName:  userData.LastName,
+		Email:     userData.Email,
+		Phone:     userData.Phone,
+	})
 
 	if err != nil {
 		context.Error(err).SetMeta(err)
@@ -137,21 +162,5 @@ func getUser(context *gin.Context, repository *users.Repository) {
 		context.Error(err).SetMeta(err)
 	} else {
 		context.Set("result", user)
-	}
-
-}
-
-func createUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	userData := context.MustGet("userData").(users.UserData)
-
-	id, err := repository.Create(userId, userData)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.JSON(http.StatusCreated, gin.H{
-			"id": id,
-		})
 	}
 }

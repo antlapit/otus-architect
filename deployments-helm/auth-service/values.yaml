@@ -64,3 +64,11 @@ jwt:
   privateKeyFile: keys/rsa.private
   issuer: http://arch.homework
   audience: http://arch.homework
+
+kafka:
+  writer:
+    host: kafka-0.kafka-headless
+    port: 9092
+  reader:
+    host: kafka
+    port: 9092
