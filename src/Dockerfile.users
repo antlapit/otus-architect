@@ -11,6 +11,7 @@ WORKDIR /build
 
 # Copy and download dependency using go mod
 COPY user-profile-service /user-profile-service
+COPY api /api
 COPY toolbox /toolbox
 
 WORKDIR /user-profile-service

@@ -11,6 +11,7 @@ WORKDIR /build
 
 # Copy and download dependency using go mod
 COPY order-service /order-service
+COPY api /api
 COPY toolbox /toolbox
 
 WORKDIR /order-service

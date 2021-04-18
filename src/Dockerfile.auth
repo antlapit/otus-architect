@@ -11,6 +11,7 @@ WORKDIR /build
 
 # Copy and download dependency using go mod
 COPY auth-service /auth-service
+COPY api /api
 COPY toolbox /toolbox
 
 WORKDIR /auth-service

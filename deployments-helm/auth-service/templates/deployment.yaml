@@ -89,10 +89,10 @@ spec:
                   name: auth-config
                   key: KAFKA_READER_PORT
             - name: KAFKA_WRITER_HOST
-                valueFrom:
-                  configMapKeyRef:
-                    name: auth-config
-                    key: KAFKA_WRITER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: KAFKA_WRITER_HOST
             - name: KAFKA_WRITER_PORT
               valueFrom:
                 configMapKeyRef:

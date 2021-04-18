@@ -29,3 +29,7 @@ kubectl delete clusterrolebinding prom-kube-prometheus-stack-prometheus-psp
 kubectl delete clusterrolebinding prom-kube-state-metrics
 kubectl delete clusterrolebinding psp-prom-kube-state-metrics
 kubectl delete clusterrolebinding psp-prom-prometheus-node-exporter
+
+
+kubectl delete job auth-service-release
+kubectl delete job user-profile-service-release

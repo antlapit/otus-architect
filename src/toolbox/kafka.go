@@ -21,7 +21,7 @@ type KafkaServer struct {
 type MessageHandler func(string, string)
 
 func (this *KafkaServer) StartNewEventReader(topic string, consumerGroup string, marshaller *EventMarshaller, handler EventHandler) {
-	this.startNewReader(topic, consumerGroup, func(key string, value string) {
+	go this.startNewReader(topic, consumerGroup, func(key string, value string) {
 		id, t, data, err := marshaller.UnmarshallToType(value)
 		if err != nil {
 			fmt.Printf("Error processing eventId=%s, eventType=%s, err = %s", id, t, err)
@@ -31,13 +31,17 @@ func (this *KafkaServer) StartNewEventReader(topic string, consumerGroup string,
 }
 
 func (this *KafkaServer) startNewReader(topic string, consumerGroup string, handler MessageHandler) {
+	address := fmt.Sprintf("%s:%s", this.reader.Host, this.reader.Port)
+	log.Printf("Starting kafka reader (address %s)(topic %s)(consumer group %s)", address, topic, consumerGroup)
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{fmt.Sprintf("%s:%s", this.reader.Host, this.reader.Port)},
+		Brokers:  []string{address},
 		GroupID:  consumerGroup,
 		Topic:    topic,
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
+
+	log.Printf("Kafka reader (address %s)(topic %s)(consumer group %s) started", address, topic, consumerGroup)
 
 	for {
 		m, err := r.ReadMessage(context.Background())
@@ -56,15 +60,19 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 
 func (this *KafkaServer) StartNewWriter(topic string, marshaller *EventMarshaller) *EventWriter {
 	address := fmt.Sprintf("%s:%s", this.writer.Host, this.writer.Port)
+	log.Printf("Starting kafka writer (address %s)(topic %s)", address, topic)
 	w := &kafka.Writer{
 		Addr:     kafka.TCP(address),
 		Topic:    topic,
 		Balancer: &kafka.LeastBytes{},
 	}
+	log.Printf("Kafka writer created (topic %s)", topic)
 
 	_, err := kafka.DialLeader(context.Background(), "tcp", address, topic, 0)
 	if err != nil {
 		panic(err.Error())
+	} else {
+		log.Printf("Kafka force created topic %s", topic)
 	}
 
 	return &EventWriter{
