@@ -1,6 +1,6 @@
 helm install nginx ingress-nginx/ingress-nginx -f deployments/nginx-ingress.yaml
 
-helm install kafka bitnami/kafka
+helm install kafka bitnami/kafka -f deployments/kafka.yaml
 
 helm install user-profile-service-release deployments-helm/user-profile-service
 helm install auth-service-release deployments-helm/auth-service

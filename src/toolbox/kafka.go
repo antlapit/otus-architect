@@ -66,7 +66,6 @@ func (this *KafkaServer) StartNewWriter(topic string, marshaller *EventMarshalle
 		Topic:    topic,
 		Balancer: &kafka.LeastBytes{},
 	}
-	log.Printf("Kafka writer created (topic %s)", topic)
 
 	_, err := kafka.DialLeader(context.Background(), "tcp", address, topic, 0)
 	if err != nil {
@@ -74,6 +73,8 @@ func (this *KafkaServer) StartNewWriter(topic string, marshaller *EventMarshalle
 	} else {
 		log.Printf("Kafka force created topic %s", topic)
 	}
+
+	log.Printf("Kafka writer created (topic %s)", topic)
 
 	return &EventWriter{
 		writer:     w,

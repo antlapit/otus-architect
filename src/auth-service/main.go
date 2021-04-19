@@ -102,8 +102,8 @@ func submitUserCreationEvent(context *gin.Context, repository *auth.Repository, 
 		return
 	}
 
-	_, err := repository.GetByUsername(loginVals.Username)
-	if err != nil {
+	ud, err := repository.GetByUsername(loginVals.Username)
+	if (ud != auth.UserData{}) {
 		return
 	}
 
