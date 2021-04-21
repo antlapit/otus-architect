@@ -1,16 +1,16 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
-  repository: antlapit/otus-architect-auth-service
+  repository: antlapit/otus-architect-billing-service
   pullPolicy: IfNotPresent
   tag: "v2"
 
-nameOverride: auth-service
-fullnameOverride: "auth-service"
+nameOverride: billing-service
+fullnameOverride: "billing-service"
 
 service:
   type: NodePort
-  port: 8001
+  port: 8003
 
 ingress:
   enabled: false
@@ -37,9 +37,9 @@ autoscaling:
 postgresql:
   enabled: true
   postgresqlPostgresPassword: postgres
-  postgresqlDatabase: auth
-  postgresqlUsername: auth
-  postgresqlPassword: za5@vKwFv-KHdN7&
+  postgresqlDatabase: billing
+  postgresqlUsername: billing
+  postgresqlPassword: 9nS8h9qZLVn64Egz
   service:
     type: NodePort
     port: "5432"

@@ -11,10 +11,8 @@ data:
   AUTH_PRIVATE_KEY_FILE: {{ .Values.jwt.privateKeyFile | quote }}
   AUTH_ISSUER: {{ .Values.jwt.issuer | quote }}
   AUTH_AUDIENCE: {{ .Values.jwt.audience | quote }}
-  KAFKA_READER_HOST: {{ .Values.kafka.reader.host | quote }}
-  KAFKA_READER_PORT: {{ .Values.kafka.reader.port | quote }}
-  KAFKA_WRITER_HOST: {{ .Values.kafka.writer.host | quote }}
-  KAFKA_WRITER_PORT: {{ .Values.kafka.writer.port | quote }}
+  KAFKA_BROKER_HOST: {{ .Values.kafka.broker.host | quote }}
+  KAFKA_BROKER_PORT: {{ .Values.kafka.broker.port | quote }}
 ---
 apiVersion: v1
 kind: Secret

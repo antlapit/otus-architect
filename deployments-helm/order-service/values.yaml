@@ -1,16 +1,16 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
-  repository: antlapit/otus-architect-auth-service
+  repository: antlapit/otus-architect-order-service
   pullPolicy: IfNotPresent
   tag: "v2"
 
-nameOverride: auth-service
-fullnameOverride: "auth-service"
+nameOverride: order-service
+fullnameOverride: "order-service"
 
 service:
   type: NodePort
-  port: 8001
+  port: 8002
 
 ingress:
   enabled: false
@@ -37,9 +37,9 @@ autoscaling:
 postgresql:
   enabled: true
   postgresqlPostgresPassword: postgres
-  postgresqlDatabase: auth
-  postgresqlUsername: auth
-  postgresqlPassword: za5@vKwFv-KHdN7&
+  postgresqlDatabase: orders
+  postgresqlUsername: orders
+  postgresqlPassword: ZwzgAY26SWbgW5Cn
   service:
     type: NodePort
     port: "5432"

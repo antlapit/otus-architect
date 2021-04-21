@@ -14,8 +14,7 @@ type KafkaEnvironmentConfig struct {
 }
 
 type KafkaServer struct {
-	reader *KafkaEnvironmentConfig
-	writer *KafkaEnvironmentConfig
+	broker *KafkaEnvironmentConfig
 }
 
 type MessageHandler func(string, string)
@@ -31,8 +30,8 @@ func (this *KafkaServer) StartNewEventReader(topic string, consumerGroup string,
 }
 
 func (this *KafkaServer) startNewReader(topic string, consumerGroup string, handler MessageHandler) {
-	address := fmt.Sprintf("%s:%s", this.reader.Host, this.reader.Port)
-	log.Printf("Starting kafka reader (address %s)(topic %s)(consumer group %s)", address, topic, consumerGroup)
+	address := fmt.Sprintf("%s:%s", this.broker.Host, this.broker.Port)
+	log.Printf("Starting kafka broker (address %s)(topic %s)(consumer group %s)", address, topic, consumerGroup)
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{address},
 		GroupID:  consumerGroup,
@@ -41,7 +40,7 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 		MaxBytes: 10e6, // 10MB
 	})
 
-	log.Printf("Kafka reader (address %s)(topic %s)(consumer group %s) started", address, topic, consumerGroup)
+	log.Printf("Kafka broker (address %s)(topic %s)(consumer group %s) started", address, topic, consumerGroup)
 
 	for {
 		m, err := r.ReadMessage(context.Background())
@@ -54,12 +53,12 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 	}
 
 	if err := r.Close(); err != nil {
-		log.Fatal("failed to close reader:", err)
+		log.Fatal("failed to close broker:", err)
 	}
 }
 
 func (this *KafkaServer) StartNewWriter(topic string, marshaller *EventMarshaller) *EventWriter {
-	address := fmt.Sprintf("%s:%s", this.writer.Host, this.writer.Port)
+	address := fmt.Sprintf("%s:%s", this.broker.Host, this.broker.Port)
 	log.Printf("Starting kafka writer (address %s)(topic %s)", address, topic)
 	w := &kafka.Writer{
 		Addr:     kafka.TCP(address),
@@ -111,24 +110,17 @@ func (this *EventWriter) write(key string, value string) error {
 	return err
 }
 
-func LoadKafkaReaderEnvironmentConfig() *KafkaEnvironmentConfig {
+func LoadKafkaEnvironmentConfig() *KafkaEnvironmentConfig {
 	return &KafkaEnvironmentConfig{
-		Host: os.Getenv("KAFKA_READER_HOST"),
-		Port: os.Getenv("KAFKA_READER_PORT"),
-	}
-}
-
-func LoadKafkaWriterEnvironmentConfig() *KafkaEnvironmentConfig {
-	return &KafkaEnvironmentConfig{
-		Host: os.Getenv("KAFKA_WRITER_HOST"),
-		Port: os.Getenv("KAFKA_WRITER_PORT"),
+		Host: os.Getenv("KAFKA_BROKER_HOST"),
+		Port: os.Getenv("KAFKA_BROKER_PORT"),
 	}
 }
 
 func InitKafkaDefault() *KafkaServer {
-	return InitKafka(LoadKafkaReaderEnvironmentConfig(), LoadKafkaWriterEnvironmentConfig())
+	return InitKafka(LoadKafkaEnvironmentConfig())
 }
 
-func InitKafka(reader *KafkaEnvironmentConfig, writer *KafkaEnvironmentConfig) *KafkaServer {
-	return &KafkaServer{reader: reader, writer: writer}
+func InitKafka(broker *KafkaEnvironmentConfig) *KafkaServer {
+	return &KafkaServer{broker: broker}
 }

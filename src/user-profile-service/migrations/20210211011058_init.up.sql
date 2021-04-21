@@ -11,9 +11,3 @@ create table user_profile
 
 create unique index user_profile_id_uindex
     on user_profile (id);
-
-create unique index user_profile_email_uindex
-    on user_profile (email);
-
-create unique index user_profile_phone_uindex
-    on user_profile (phone);

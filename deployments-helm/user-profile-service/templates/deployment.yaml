@@ -78,26 +78,16 @@ spec:
                 configMapKeyRef:
                   name: user-profile-config
                   key: AUTH_AUDIENCE
-            - name: KAFKA_READER_HOST
+            - name: KAFKA_BROKER_HOST
               valueFrom:
                 configMapKeyRef:
                   name: user-profile-config
-                  key: KAFKA_READER_HOST
-            - name: KAFKA_READER_PORT
+                  key: KAFKA_BROKER_HOST
+            - name: KAFKA_BROKER_PORT
               valueFrom:
                 configMapKeyRef:
                   name: user-profile-config
-                  key: KAFKA_READER_PORT
-            - name: KAFKA_WRITER_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: user-profile-config
-                  key: KAFKA_WRITER_HOST
-            - name: KAFKA_WRITER_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: user-profile-config
-                  key: KAFKA_WRITER_PORT
+                  key: KAFKA_BROKER_PORT
           livenessProbe:
             httpGet:
               path: {{ .Values.health.path }}

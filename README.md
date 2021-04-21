@@ -23,6 +23,7 @@ Homework Otus Architect
 * `docker build -t antlapit/otus-architect-auth-service:v2 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v2 -f Dockerfile.users .`
 * `docker build -t antlapit/otus-architect-order-service:v2 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-billing-service:v2 -f Dockerfile.billing .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция

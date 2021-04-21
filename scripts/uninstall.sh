@@ -1,5 +1,7 @@
 helm delete user-profile-service-release
 helm delete auth-service-release
+helm delete order-service-release
+helm delete billing-service-release
 helm delete krakend
 
 helm delete prom

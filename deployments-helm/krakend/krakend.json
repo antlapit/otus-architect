@@ -172,7 +172,7 @@
     },
     {
       "endpoint": "/profile",
-      "method": "PUT",
+      "method": "POST",
       "output_encoding": "no-op",
       "headers_to_pass": [
         "*"

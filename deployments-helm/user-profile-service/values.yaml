@@ -66,9 +66,6 @@ jwt:
   audience: http://arch.homework
 
 kafka:
-  writer:
+  broker:
     host: kafka-0.kafka-headless
-    port: 9092
-  reader:
-    host: kafka
     port: 9092

@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "auth-service.fullname" . }}
+  name: {{ include "order-service.fullname" . }}
   labels:
-    {{- include "auth-service.labels" . | nindent 4 }}
+    {{- include "order-service.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "auth-service.selectorLabels" . | nindent 6 }}
+      {{- include "order-service.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "auth-service.selectorLabels" . | nindent 8 }}
+        {{- include "order-service.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
     spec:
@@ -31,62 +31,62 @@ spec:
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: auth-secret
+                  name: order-secret
                   key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: auth-secret
+                  name: order-secret
                   key: DB_PASSWORD
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: DB_PORT
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: DB_NAME
             - name: AUTH_REALM
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: AUTH_REALM
             - name: AUTH_PUBLIC_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: AUTH_PUBLIC_KEY_FILE
             - name: AUTH_PRIVATE_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: AUTH_PRIVATE_KEY_FILE
             - name: AUTH_ISSUER
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: AUTH_ISSUER
             - name: AUTH_AUDIENCE
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: AUTH_AUDIENCE
             - name: KAFKA_BROKER_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: KAFKA_BROKER_HOST
             - name: KAFKA_BROKER_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: auth-config
+                  name: order-config
                   key: KAFKA_BROKER_PORT
           livenessProbe:
             httpGet:
