@@ -166,18 +166,18 @@ func submitChangePasswordEvent(context *gin.Context, repository *auth.Repository
 	var req changePasswordRequest
 	if err := context.ShouldBindJSON(&req); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+		return
 	} else {
 		userName := jwt.ExtractClaims(context)[UserNameKey].(string)
 		user, err := repository.GetByUsername(userName)
 
 		if err == nil {
-			oldPass, err := bcrypt.GenerateFromPassword([]byte(req.OldPassword), bcrypt.MinCost)
 			newPass, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.MinCost)
 			if err == nil {
 				_, err = writer.WriteEvent(event.EVENT_CHANGE_PASSWORD, event.UserChangePassword{
 					UserId:      user.Id,
 					Username:    userName,
-					OldPassword: string(oldPass),
+					OldPassword: req.OldPassword,
 					NewPassword: string(newPass),
 				})
 			}
@@ -195,7 +195,7 @@ func changePassword(repository *auth.Repository, data event.UserChangePassword) 
 	user, err := repository.GetByUsername(userName)
 
 	if err == nil {
-		if user.Password == data.OldPassword {
+		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data.OldPassword)) == nil {
 			_, err = repository.UpdatePassword(user.Id, data.NewPassword)
 		}
 	}

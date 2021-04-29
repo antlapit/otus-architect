@@ -10,7 +10,7 @@ fullnameOverride: "billing-service"
 
 service:
   type: NodePort
-  port: 8003
+  port: 8002
 
 ingress:
   enabled: false
