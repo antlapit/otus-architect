@@ -2,12 +2,16 @@ helm delete user-profile-service-release
 helm delete auth-service-release
 helm delete order-service-release
 helm delete billing-service-release
+helm dleete notification-service-release
 helm delete krakend
 
 helm delete prom
 helm delete nginx
 helm delete postgres-exporter-users
 helm delete postgres-exporter-auth
+helm delete postgres-exporter-order
+helm delete postgres-exporter-billing
+helm delete postgres-exporter-notification
 
 helm delete kafka
 

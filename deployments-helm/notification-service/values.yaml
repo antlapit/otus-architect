@@ -1,16 +1,16 @@
-replicaCount: 0
+replicaCount: 1
 
 image:
-  repository: antlapit/otus-architect-billing-service
+  repository: antlapit/otus-architect-notification-service
   pullPolicy: IfNotPresent
   tag: "v2"
 
-nameOverride: billing-service
-fullnameOverride: "billing-service"
+nameOverride: notification-service
+fullnameOverride: "notification-service"
 
 service:
   type: NodePort
-  port: 8002
+  port: 8004
 
 ingress:
   enabled: false
@@ -37,9 +37,9 @@ autoscaling:
 postgresql:
   enabled: true
   postgresqlPostgresPassword: postgres
-  postgresqlDatabase: billing
-  postgresqlUsername: billing
-  postgresqlPassword: 9nS8h9qZLVn64Egz
+  postgresqlDatabase: notifications
+  postgresqlUsername: notifications
+  postgresqlPassword: X6fdyvcbDEdtcXrN
   service:
     type: NodePort
     port: "5432"

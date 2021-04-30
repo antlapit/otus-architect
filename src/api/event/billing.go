@@ -16,8 +16,8 @@ var BillingEvents = map[string]interface{}{
 }
 
 type MoneyAdded struct {
-	UserId     int64     `json:"userId" binding:"required"`
-	MoneyAdded big.Float `json:"moneyAdded" binding:"required"`
+	UserId     int64      `json:"userId" binding:"required"`
+	MoneyAdded *big.Float `json:"moneyAdded" binding:"required"`
 }
 
 type PaymentConfirmed struct {

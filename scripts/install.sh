@@ -1,13 +1,18 @@
 helm install nginx ingress-nginx/ingress-nginx -f deployments/nginx-ingress.yaml
 
+helm install postgres bitname/postgresql -f deployments/postgresql.yaml
 helm install kafka bitnami/kafka -f deployments/kafka.yaml
 
 helm install user-profile-service-release deployments-helm/user-profile-service
 helm install auth-service-release deployments-helm/auth-service
 helm install order-service-release deployments-helm/order-service
 helm install billing-service-release deployments-helm/billing-service
+helm install notification-service-release deployments-helm/notification-service
 helm install krakend deployments-helm/krakend
 
 helm install prom prometheus-community/kube-prometheus-stack -f deployments/prometheus.yaml --atomic
 helm install postgres-exporter-users prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-users.yaml
 helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-auth.yaml
+helm install postgres-exporter-order prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-order.yaml
+helm install postgres-exporter-billing prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml
+helm install postgres-exporter-notification prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml

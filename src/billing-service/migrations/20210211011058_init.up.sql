@@ -4,7 +4,7 @@ create table account
         constraint account_pk
             primary key,
     user_id integer not null,
-    money   integer not null default 0
+    money   decimal not null default 0
         constraint money_nonnegative check (money >= 0)
 );
 

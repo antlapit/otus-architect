@@ -240,6 +240,64 @@
       }
     },
     {
+      "endpoint": "/bills",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://billing-service:8002"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/accounts/by-user-id/{JWT.sub}/bills"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/bills/{billId}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://billing-service:8002"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/accounts/by-user-id/{JWT.sub}/bills/{billId}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
       "endpoint": "/bills/{billId}/confirm",
       "method": "POST",
       "output_encoding": "no-op",
@@ -253,6 +311,93 @@
           ],
           "encoding": "no-op",
           "url_pattern": "/accounts/by-user-id/{JWT.sub}/bills/{billId}/confirm"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/orders",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://billing-service:8003"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/users/{JWT.sub}/orders"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/orders",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://billing-service:8003"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/users/{JWT.sub}/orders"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework"
+        }
+      }
+    },
+    {
+      "endpoint": "/orders/{orderId}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://billing-service:8003"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/users/{JWT.sub}/orders/{orderId}"
         }
       ],
       "extra_config": {

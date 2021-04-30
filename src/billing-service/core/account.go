@@ -1,4 +1,4 @@
-package billing
+package core
 
 import (
 	"database/sql"
@@ -83,7 +83,7 @@ func (repository *AccountRepository) GetByUserId(userId int64) (Account, error) 
 	return account, nil
 }
 
-func (repository *AccountRepository) AddMoneyByUserId(userId int64, money big.Float) (bool, error) {
+func (repository *AccountRepository) AddMoneyByUserId(userId int64, money *big.Float) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(

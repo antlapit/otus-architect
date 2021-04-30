@@ -1,4 +1,4 @@
-package billing
+package core
 
 import (
 	"database/sql"
@@ -53,7 +53,7 @@ func (repository *BillRepository) CreateIfNotExists(accountId int64, orderId int
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(accountId, orderId, total)
+	res, err := stmt.Exec(accountId, orderId, total.String())
 	if err != nil {
 		return false, err
 	}
@@ -74,10 +74,12 @@ func (repository *BillRepository) GetById(billId int64) (Bill, error) {
 	defer stmt.Close()
 
 	var bill Bill
-	err = stmt.QueryRow(billId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
+	var totalVal sql.NullFloat64
+	err = stmt.QueryRow(billId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
+	bill.Total = big.NewFloat(totalVal.Float64)
 	if err != nil {
 		// constraints
-		return Bill{}, &BillNotFoundError{orderId: billId}
+		return Bill{}, &BillNotFoundError{id: billId}
 	}
 
 	return bill, nil
@@ -92,7 +94,9 @@ func (repository *BillRepository) GetByOrderId(orderId int64) (Bill, error) {
 	defer stmt.Close()
 
 	var bill Bill
-	err = stmt.QueryRow(orderId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
+	var totalVal sql.NullFloat64
+	err = stmt.QueryRow(orderId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
+	bill.Total = big.NewFloat(totalVal.Float64)
 	if err != nil {
 		// constraints
 		return Bill{}, &BillNotFoundError{orderId: orderId}
@@ -103,7 +107,7 @@ func (repository *BillRepository) GetByOrderId(orderId int64) (Bill, error) {
 
 func (repository *BillRepository) GetByUserId(orderId int64) ([]Bill, error) {
 	db := repository.DB
-	stmt, err := db.Prepare(`SELECT id, account_id, order_id, status, total 
+	stmt, err := db.Prepare(`SELECT bill.id, account_id, order_id, status, total 
 									FROM bill 
 									JOIN account ON account.id = bill.account_id
 									WHERE user_id = $1`)
@@ -115,12 +119,14 @@ func (repository *BillRepository) GetByUserId(orderId int64) ([]Bill, error) {
 	rows, err := stmt.Query(orderId)
 	if err != nil {
 		// constraints
-		return []Bill{}, &BillNotFoundError{orderId: orderId}
+		return []Bill{}, err
 	} else {
-		var result []Bill
+		var result []Bill = make([]Bill, 0)
 		for rows.Next() {
 			var bill Bill
-			rows.Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
+			var totalVal sql.NullFloat64
+			rows.Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
+			bill.Total = big.NewFloat(totalVal.Float64)
 			result = append(result, bill)
 		}
 		return result, nil

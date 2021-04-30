@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
+	"math/big"
+	"reflect"
 )
 
 type BaseEvent struct {
@@ -14,6 +16,10 @@ type BaseEvent struct {
 
 type EventMarshaller struct {
 	Types map[string]interface{}
+}
+
+func NewEventMarshaller(types map[string]interface{}) *EventMarshaller {
+	return &EventMarshaller{Types: types}
 }
 
 type EventHandler func(id string, eventType string, data interface{})
@@ -34,7 +40,13 @@ func (this *EventMarshaller) UnmarshallToType(input string) (string, string, int
 		return env.EventId, env.EventType, nil, err
 	} else {
 		var realType = this.Types[env.EventType]
-		err := mapstructure.Decode(eventData, &realType)
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				ToBigFloatHookFunc(),
+			),
+			Result: &realType,
+		})
+		err = decoder.Decode(eventData)
 		if err == nil {
 			return env.EventId, env.EventType, realType, nil
 		} else {
@@ -56,4 +68,32 @@ func (this *EventMarshaller) Marshall(eventType string, data interface{}) (strin
 	} else {
 		return "", "", err
 	}
+}
+
+func ToBigFloatHookFunc() mapstructure.DecodeHookFunc {
+	return func(
+		from reflect.Type,
+		to reflect.Type,
+		data interface{}) (interface{}, error) {
+		if to != reflect.TypeOf(big.Float{}) {
+			return data, nil
+		}
+
+		switch from.Kind() {
+		case reflect.String:
+			r, _, err := big.NewFloat(0).Parse(data.(string), 10)
+			return r, err
+		case reflect.Float64:
+			return big.NewFloat(data.(float64)), nil
+		case reflect.Int64:
+			return big.NewFloat(float64(data.(int64))), nil
+		default:
+			return data, nil
+		}
+		// Convert it by parsing
+	}
+}
+
+type EventProcessor interface {
+	ProcessEvent(id string, eventType string, data interface{})
 }
