@@ -3,8 +3,8 @@ kind: ConfigMap
 metadata:
   name: user-profile-config
 data:
-  DB_HOST: {{ (include "postgresql.fullname" .) | quote }}
-  DB_PORT: {{ .Values.postgresql.service.port | quote }}
+  DB_HOST: {{ .Values.postgresql.postgresqlHost | quote }}
+  DB_PORT: {{ .Values.postgresql.postgresqlPort | quote }}
   DB_NAME: {{ .Values.postgresql.postgresqlDatabase | quote }}
   AUTH_REALM: {{ .Values.jwt.realm | quote }}
   AUTH_PUBLIC_KEY_FILE: {{ .Values.jwt.publicKeyFile | quote }}

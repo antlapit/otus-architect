@@ -186,3 +186,30 @@ func (repository *BillRepository) Complete(billId int64) (bool, error) {
 		return true, nil
 	}
 }
+
+func (repository *BillRepository) Reject(billId int64) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE bill
+				SET status = 'REJECTED'
+				WHERE id = $1 AND status = 'NEW'`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(billId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &BillInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &BillNotFoundError{id: billId}
+	} else {
+		return true, nil
+	}
+}

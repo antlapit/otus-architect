@@ -66,10 +66,13 @@ func (c *OrderApplication) ProcessEvent(id string, eventType string, data interf
 	switch data.(type) {
 	case event.OrderCreated:
 		c.createOrder(data.(event.OrderCreated))
+		break
 	case event.PaymentCompleted:
 		c.completeOrder(data.(event.PaymentCompleted))
+		break
 	case event.OrderRejected:
 		c.rejectOrder(data.(event.OrderRejected))
+		break
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
@@ -86,32 +89,36 @@ func (c *OrderApplication) createOrder(data event.OrderCreated) {
 func (c *OrderApplication) completeOrder(data event.PaymentCompleted) {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
-		log.Warn(err.Error())
+		log.Error(err.Error())
 		return
 	}
-
-	c.orderEventWriter.WriteEvent(event.EVENT_ORDER_COMPLETED, event.OrderCompleted{
-		OrderId: order.Id,
-		UserId:  order.UserId,
-		Amount:  order.Amount,
-	})
 
 	if order.Status != "NEW" {
 		return
 	}
+
+	_, err = c.orderEventWriter.WriteEvent(event.EVENT_ORDER_COMPLETED, event.OrderCompleted{
+		OrderId: order.Id,
+		UserId:  order.UserId,
+		Amount:  order.Amount,
+	})
+	if err != nil {
+		log.Error(err.Error())
+	}
+
 	res, err := c.orderRepository.Complete(order.Id)
 	if err != nil {
-		log.Warn(err.Error())
+		log.Error(err.Error())
 	}
 	if !res {
-		log.Warn("Cannot complete order")
+		log.Error("Cannot complete order")
 	}
 }
 
 func (c *OrderApplication) rejectOrder(data event.OrderRejected) {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
-		log.Warn(err.Error())
+		log.Error(err.Error())
 		return
 	}
 	if order.Status != "NEW" {
@@ -119,10 +126,10 @@ func (c *OrderApplication) rejectOrder(data event.OrderRejected) {
 	}
 	res, err := c.orderRepository.Reject(order.Id)
 	if err != nil {
-		log.Warn(err.Error())
+		log.Error(err.Error())
 	}
 	if !res {
-		log.Warn("Cannot reject order")
+		log.Error("Cannot reject order")
 	}
 }
 

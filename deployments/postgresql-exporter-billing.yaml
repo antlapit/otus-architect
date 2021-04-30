@@ -18,7 +18,7 @@ serviceMonitor:
 
 config:
   datasource:
-    host: billing-service-release-postgresql
+    host: postgres-postgresql
     user: billing
     password: 9nS8h9qZLVn64Egz
     port: "5432"

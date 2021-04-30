@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
+	"github.com/prometheus/common/log"
 )
 
 type NotificationApplication struct {
@@ -23,15 +24,24 @@ func (app *NotificationApplication) ProcessEvent(id string, eventType string, da
 	switch data.(type) {
 	case event.OrderCreated:
 		castedData := data.(event.OrderCreated)
-		app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		if err != nil {
+			log.Error(err.Error())
+		}
 		break
 	case event.OrderCompleted:
 		castedData := data.(event.OrderCompleted)
-		app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		if err != nil {
+			log.Error(err.Error())
+		}
 		break
 	case event.OrderRejected:
 		castedData := data.(event.OrderRejected)
-		app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		if err != nil {
+			log.Error(err.Error())
+		}
 		break
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)

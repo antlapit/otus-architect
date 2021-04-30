@@ -1,7 +1,7 @@
-create table order
+create table orders
 (
     id      serial  not null
-        constraint order_pk
+        constraint orders_pk
             primary key,
     user_id integer not null,
     status varchar(100) not null,
@@ -10,7 +10,7 @@ create table order
 );
 
 create unique index order_id_uindex
-    on order (id);
+    on orders (id);
 
 create index order_user_id_index
-    on order (user_id);
+    on orders (user_id);

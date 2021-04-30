@@ -43,15 +43,15 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, amount *b
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO order(user_id, status, amount) 
-				VALUES($1, 'NEW', $2)`,
+		`INSERT INTO orders(id, user_id, status, amount) 
+				VALUES($1, $2, 'NEW', $3)`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(userId, orderId, amount.String())
+	res, err := stmt.Exec(orderId, userId, amount.String())
 	if err != nil {
 		return false, err
 	}
@@ -65,7 +65,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, amount *b
 
 func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, user_id, status, amount FROM order WHERE id = $1")
+	stmt, err := db.Prepare("SELECT id, user_id, status, amount FROM orders WHERE id = $1")
 	if err != nil {
 		return Order{}, err
 	}
@@ -86,7 +86,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
 	db := repository.DB
 	stmt, err := db.Prepare(`SELECT id, user_id, status, amount 
-									FROM order 
+									FROM orders 
 									WHERE user_id = $1`)
 	if err != nil {
 		return []Order{}, err
@@ -114,7 +114,7 @@ func (repository *OrderRepository) Reject(orderId int64) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`UPDATE order
+		`UPDATE orders
 				SET status = 'REJECTED'
 				WHERE id = $1 AND status = 'NEW'`,
 	)
@@ -141,7 +141,7 @@ func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`UPDATE order
+		`UPDATE orders
 				SET status = 'COMPLETED'
 				WHERE id = $1 AND status = 'NEW'`,
 	)
@@ -167,7 +167,7 @@ func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
 func (repository *OrderRepository) GetNextOrderId() (int64, error) {
 	db := repository.DB
 	var id int64
-	err := db.QueryRow("SELECT nextval('order_id_seq')").Scan(&id)
+	err := db.QueryRow("SELECT nextval('orders_id_seq')").Scan(&id)
 	if err != nil {
 		return -1, err
 	}

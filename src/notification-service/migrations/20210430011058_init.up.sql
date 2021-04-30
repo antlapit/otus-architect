@@ -17,4 +17,4 @@ create index notification_user_id_index
     on notification (user_id);
 
 create index notification_event_uindex
-    on notification (event_id, event_type);
+    on notification (order_id, event_type);

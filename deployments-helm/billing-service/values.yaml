@@ -1,4 +1,4 @@
-replicaCount: 0
+replicaCount: 1
 
 image:
   repository: antlapit/otus-architect-billing-service
@@ -35,18 +35,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 postgresql:
-  enabled: true
-  postgresqlPostgresPassword: postgres
+  postgresqlHost: postgres-postgresql
+  postgresqlPort: 5432
   postgresqlDatabase: billing
   postgresqlUsername: billing
   postgresqlPassword: 9nS8h9qZLVn64Egz
-  service:
-    type: NodePort
-    port: "5432"
-  persistence:
-    size: 256Mi
-  postgresqlExtendedConf:
-    sharedPreloadLibraries: 'pg_stat_statements'
 
 health:
   path: /health

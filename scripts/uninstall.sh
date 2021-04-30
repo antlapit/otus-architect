@@ -2,7 +2,7 @@ helm delete user-profile-service-release
 helm delete auth-service-release
 helm delete order-service-release
 helm delete billing-service-release
-helm dleete notification-service-release
+helm delete notification-service-release
 helm delete krakend
 
 helm delete prom
@@ -14,6 +14,7 @@ helm delete postgres-exporter-billing
 helm delete postgres-exporter-notification
 
 helm delete kafka
+helm delete postgres
 
 kubectl delete clusterrole nginx-ingress-nginx
 kubectl delete clusterrole prom-grafana-clusterrole

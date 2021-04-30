@@ -10,7 +10,7 @@ fullnameOverride: "order-service"
 
 service:
   type: NodePort
-  port: 8002
+  port: 8003
 
 ingress:
   enabled: false
@@ -35,18 +35,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 postgresql:
-  enabled: true
-  postgresqlPostgresPassword: postgres
+  postgresqlHost: postgres-postgresql
+  postgresqlPort: 5432
   postgresqlDatabase: orders
   postgresqlUsername: orders
   postgresqlPassword: ZwzgAY26SWbgW5Cn
-  service:
-    type: NodePort
-    port: "5432"
-  persistence:
-    size: 256Mi
-  postgresqlExtendedConf:
-    sharedPreloadLibraries: 'pg_stat_statements'
 
 health:
   path: /health

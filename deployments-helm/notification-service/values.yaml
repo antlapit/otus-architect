@@ -35,18 +35,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 postgresql:
-  enabled: true
-  postgresqlPostgresPassword: postgres
+  postgresqlHost: postgres-postgresql
+  postgresqlPort: 5432
   postgresqlDatabase: notifications
   postgresqlUsername: notifications
   postgresqlPassword: X6fdyvcbDEdtcXrN
-  service:
-    type: NodePort
-    port: "5432"
-  persistence:
-    size: 256Mi
-  postgresqlExtendedConf:
-    sharedPreloadLibraries: 'pg_stat_statements'
 
 health:
   path: /health

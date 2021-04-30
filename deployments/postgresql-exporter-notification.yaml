@@ -18,7 +18,7 @@ serviceMonitor:
 
 config:
   datasource:
-    host: notification-service-release-postgresql
+    host: postgres-postgresql
     user: notifications
     password: X6fdyvcbDEdtcXrN
     port: "5432"

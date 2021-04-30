@@ -18,7 +18,7 @@ serviceMonitor:
 
 config:
   datasource:
-    host: order-service-release-postgresql
+    host: postgres-postgresql
     user: orders
     password: ZwzgAY26SWbgW5Cn
     port: "5432"

@@ -42,7 +42,7 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.No
 func initApi(secureGroup *gin.RouterGroup, app *core.NotificationApplication) {
 	secureGroup.Use(errorHandler)
 
-	ordersRoute := secureGroup.Group("/users/:id/orders")
+	ordersRoute := secureGroup.Group("/users/:id/notifications")
 	ordersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
 
 	ordersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {

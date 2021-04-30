@@ -1,0 +1,35 @@
+postgresqlDatabase: postgres
+postgresqlPassword: postgres
+
+service:
+  type: NodePort
+  port: "5432"
+persistence:
+  size: 1Gi
+postgresqlExtendedConf:
+  sharedPreloadLibraries: 'pg_stat_statements'
+
+initdbUser: postgres
+initdbPassword: postgres
+
+initdbScripts:
+  init.sql: |
+    CREATE USER auth;
+    ALTER USER auth WITH PASSWORD 'za5@vKwFv-KHdN7&';
+    CREATE DATABASE auth WITH OWNER auth;
+
+    CREATE USER billing;
+    ALTER USER billing WITH PASSWORD '9nS8h9qZLVn64Egz';
+    CREATE DATABASE billing WITH OWNER billing;
+
+    CREATE USER notifications;
+    ALTER USER notifications WITH PASSWORD 'X6fdyvcbDEdtcXrN';
+    CREATE DATABASE notifications WITH OWNER notifications;
+
+    CREATE USER orders;
+    ALTER USER orders WITH PASSWORD 'ZwzgAY26SWbgW5Cn';
+    CREATE DATABASE orders WITH OWNER orders;
+
+    CREATE USER users;
+    ALTER USER users WITH PASSWORD '_ky62W9An32QMXPZ';
+    CREATE DATABASE users WITH OWNER users;
