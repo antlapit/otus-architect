@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-config
+data:
+  DB_HOST: {{ .Values.postgresql.postgresqlHost | quote }}
+  DB_PORT: {{ .Values.postgresql.postgresqlPort | quote }}
+  DB_NAME: {{ .Values.postgresql.postgresqlDatabase | quote }}
+  AUTH_REALM: {{ .Values.jwt.realm | quote }}
+  AUTH_PUBLIC_KEY_FILE: {{ .Values.jwt.publicKeyFile | quote }}
+  AUTH_PRIVATE_KEY_FILE: {{ .Values.jwt.privateKeyFile | quote }}
+  AUTH_ISSUER: {{ .Values.jwt.issuer | quote }}
+  AUTH_AUDIENCE: {{ .Values.jwt.audience | quote }}
+  KAFKA_BROKER_HOST: {{ .Values.kafka.broker.host | quote }}
+  KAFKA_BROKER_PORT: {{ .Values.kafka.broker.port | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: notification-secret
+type: Opaque
+data:
+  DB_USER: {{ .Values.postgresql.postgresqlUsername | b64enc | quote }}
+  DB_PASSWORD: {{ .Values.postgresql.postgresqlPassword | b64enc | quote }}

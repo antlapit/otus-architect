@@ -1,4 +1,4 @@
-module gitlab.com/antlapit/otus-architect/toolbox
+module github.com/antlapit/otus-architect/toolbox
 
 go 1.15
 
@@ -7,8 +7,10 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate/v4 v4.14.1
+	github.com/google/uuid v1.1.2
 	github.com/lestrrat-go/jwx v1.1.5
 	github.com/lib/pq v1.9.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/prometheus/client_golang v1.9.0
-	github.com/stretchr/testify v1.6.1 // indirect
+	github.com/segmentio/kafka-go v0.4.12
 )

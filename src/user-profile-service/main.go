@@ -1,50 +1,57 @@
 package main
 
 import (
+	"github.com/antlapit/otus-architect/api/event"
+	. "github.com/antlapit/otus-architect/toolbox"
+	"github.com/antlapit/otus-architect/user-profile-service/core"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	. "gitlab.com/antlapit/otus-architect/toolbox"
-	"gitlab.com/antlapit/otus-architect/user-profile-service/users"
 	"net/http"
 	"os"
 )
 
 func main() {
 	serviceMode := os.Getenv("SERVICE_MODE")
-
-	dbConfig := LoadDatabaseConfig()
-
-	db, driver := InitDatabase(dbConfig)
+	db, driver, dbConfig := InitDefaultDatabase()
 
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		var repository = users.Repository{DB: db}
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
 
-		engine, _, secureGroup, publicGroup := InitGinDefault(dbConfig)
-		initUsersApi(secureGroup, publicGroup, &repository)
+		kafka := InitKafkaDefault()
+		userEventsMarshaller := NewEventMarshaller(event.AllEvents)
+
+		eventWriter := kafka.StartNewWriter(event.TOPIC_USERS, userEventsMarshaller)
+		var app = core.NewUserApplication(db, eventWriter)
+		initUsersApi(secureGroup, app)
+		initListeners(kafka, userEventsMarshaller, app)
 		engine.Run(":8000")
 	}
 }
 
-func initUsersApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, repository *users.Repository) {
-	publicRoute := publicGroup.Group("/user/:id")
-	publicRoute.POST("", errorHandler, userIdExtractor, userDataExtractor, func(context *gin.Context) {
-		createUser(context, repository)
-	})
+func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.UserApplication) {
+	f := func(id string, eventType string, data interface{}) {
+		app.ProcessEvent(id, eventType, data)
+	}
+	kafka.StartNewEventReader(event.TOPIC_USERS, "user-profile-service", marshaller, f)
+}
 
+func initUsersApi(secureGroup *gin.RouterGroup, app *core.UserApplication) {
 	singleUserRoute := secureGroup.Group("/user/:id")
-	singleUserRoute.Use(userIdExtractor, checkUserPermissions, ResponseSerializer)
-	singleUserRoute.GET("", func(context *gin.Context) {
-		getUser(context, repository)
-	})
-	singleUserRoute.DELETE("", func(context *gin.Context) {
-		deleteUser(context, repository)
-	})
-	singleUserRoute.PUT("", userDataExtractor, func(context *gin.Context) {
-		updateUser(context, repository)
-	})
+	singleUserRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	singleUserRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId := context.GetInt64("userId")
+		user, err := app.GetById(userId)
+		return user, err, false
+	}))
+	singleUserRoute.POST("", userDataExtractor, NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId := context.GetInt64("userId")
+		userData := context.MustGet("userData").(core.UserData)
+		res, err := app.SubmitProfileChangeEvent(userId, userData)
+		return res, err, false
+	}))
 }
 
 func checkUserPermissions(context *gin.Context) {
@@ -70,7 +77,7 @@ func userIdExtractor(context *gin.Context) {
 
 // Извлечение данных пользователя из тела запроса
 func userDataExtractor(context *gin.Context) {
-	var user users.UserData
+	var user core.UserData
 	if err := context.ShouldBindJSON(&user); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA02")
 	} else {
@@ -88,10 +95,10 @@ func errorHandler(context *gin.Context) {
 		if err.Meta != nil {
 			realError := err.Meta.(error)
 			switch realError.(type) {
-			case *users.UserProfileNotFoundError:
+			case *core.UserProfileNotFoundError:
 				ErrorResponse(context, http.StatusNotFound, err, "BL01")
 				break
-			case *users.UserProfileInvalidError:
+			case *core.UserProfileInvalidError:
 				ErrorResponse(context, http.StatusConflict, err, "BL02")
 			default:
 				ErrorResponse(context, http.StatusInternalServerError, err, "FA01")
@@ -99,59 +106,5 @@ func errorHandler(context *gin.Context) {
 		} else {
 			ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
 		}
-	}
-}
-
-func updateUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	userData := context.MustGet("userData").(users.UserData)
-	res, err := repository.Update(userId, userData)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.Set("result", gin.H{
-			"success": res,
-		})
-	}
-}
-
-func deleteUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	res, err := repository.Delete(userId)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.Set("result", gin.H{
-			"success": res,
-		})
-	}
-}
-
-func getUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	user, err := repository.Get(userId)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.Set("result", user)
-	}
-
-}
-
-func createUser(context *gin.Context, repository *users.Repository) {
-	userId := context.GetInt64("userId")
-	userData := context.MustGet("userData").(users.UserData)
-
-	id, err := repository.Create(userId, userData)
-
-	if err != nil {
-		context.Error(err).SetMeta(err)
-	} else {
-		context.JSON(http.StatusCreated, gin.H{
-			"id": id,
-		})
 	}
 }

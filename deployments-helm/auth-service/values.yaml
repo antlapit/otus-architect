@@ -1,9 +1,9 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: antlapit/otus-architect-auth-service
   pullPolicy: IfNotPresent
-  tag: "v1"
+  tag: "v2"
 
 nameOverride: auth-service
 fullnameOverride: "auth-service"
@@ -35,18 +35,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 postgresql:
-  enabled: true
-  postgresqlPostgresPassword: postgres
+  postgresqlHost: postgres-postgresql
+  postgresqlPort: 5432
   postgresqlDatabase: auth
   postgresqlUsername: auth
   postgresqlPassword: za5@vKwFv-KHdN7&
-  service:
-    type: NodePort
-    port: "5432"
-  persistence:
-    size: 256Mi
-  postgresqlExtendedConf:
-    sharedPreloadLibraries: 'pg_stat_statements'
 
 health:
   path: /health
@@ -64,3 +57,8 @@ jwt:
   privateKeyFile: keys/rsa.private
   issuer: http://arch.homework
   audience: http://arch.homework
+
+kafka:
+  broker:
+    host: kafka-0.kafka-headless
+    port: 9092

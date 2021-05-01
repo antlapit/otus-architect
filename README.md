@@ -8,20 +8,40 @@ Homework Otus Architect
 - KrakenD - используется в качестве шлюза запросов. Задачи - переадресация запросов на соответствующие Backend сервисы, первичная валидация JWT токена, объединение ответов от Backend сервисов для отображения в API
 - Auth Service - сервис для работы с аутентификационными данными пользователей. Предоставляет API аутентификации и управления логином/паролем пользователя
 - User Profile Service - сервис для работы с контактными данными пользователей. Предоставляет API получения/изменения контактных данных пользвоателя.
+- Billing Service - сервис для работы со счетами на оплату
+- Orders Service - сервис для работы с заказами
+- Notification Service - сервис для уведомлений клиента
 ![Компоненты](./architecture/components.jpeg)
   
 ### Ключевые решения
+- Взаимодействие сервисов выполняется через Event Store (Kafka)
+  ![События](./architecture/events.jpeg)
 - Пользователи идентифицируются единым ИД в обоих сервисах Auth Service и User Profile Service
 - Регистрация пользователя выполняется в 2 этапа:
   - создание пользователя с логином/паролем в Auth Service
   - первичное создание профиля пользователя в User Profile Service (после логина)
 - Изменение пароля и изменения профиля являются разными операциями и выражены разными методами в API
 - Определение ИД пользователя при роутинге запросов к сервису User Profile Service выполняется на шлюзе из JWT токена
+- Большинство обработчиков событий - идемпотентны (к примеру, обработчик событий по заказам в сервисе уведомлений проверяет, что уведомление определенного типа для заказа еще не отправлялось)
+
+## Сценарии
+### Работа с заказом
+Сценарии работы с заказами (создание/оплата/отмена) описаны в виде Sequence диаграммы
+#### Реализованный вариант (Event Sourcing)
+![Sequence диаграмма "Event Sourcing"](./architecture/sequence_eventsourcing.jpeg)
+#### Альтернатива (Синхронное взаимодействие сервисов)
+![Sequence диаграмма "Синхронное взаимодействие сервисов"](./architecture/sequence_sync.jpeg)
+#### Альтернатива (Transactional Outbox и асинхронные уведомления)
+![Sequence диаграмма "Transactional Outbox и асинхронные уведомления"](./architecture/sequence_notification.jpeg)
+
 
 ## Сборка
 * `cd src`
-* `docker build -t antlapit/otus-architect-auth-service:v1 -f Dockerfile.auth .`
-* `docker build -t antlapit/otus-architect-user-profile-service:v1 -f Dockerfile.users .`
+* `docker build -t antlapit/otus-architect-auth-service:v2 -f Dockerfile.auth .`
+* `docker build -t antlapit/otus-architect-user-profile-service:v2 -f Dockerfile.users .`
+* `docker build -t antlapit/otus-architect-order-service:v3 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-billing-service:v2 -f Dockerfile.billing .`
+* `docker build -t antlapit/otus-architect-notification-service:v2 -f Dockerfile.notification .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -43,11 +63,14 @@ Homework Otus Architect
 ### Прикладные сервисы
 * **Сервис данных о профиле пользователя** `helm install user-profile-service-release deployments-helm/user-profile-service`
 * **Сервис аутентификации/авторизации** `helm install auth-service-release deployments-helm/auth-service`
+* **Сервис заказов** `helm install order-service-release deployments-helm/order-service`
+* **Сервис счетов** `helm install billing-service-release deployments-helm/billing-service`
+* **Сервис уведомлений** `helm install notification-service-release deployments-helm/notification-service`
 * **Шлюз KrakenD** `helm install krakend deployments-helm/krakend`
 
 **Состав релиза**  
 * развертывание postgresql из официального чарта
-* развертывание сервисов `user-profile-service` и `auth-service`
+* развертывание прикладных сервисов
 * для каждого сервиса выполняются стартовые миграции за счет job, который удаляется после релиза
   * миграции выполняются самим сервисом при наличии переменной окружения SERVICE_MODE=INIT
   * докер образ для job и сервиса один
@@ -58,6 +81,9 @@ Homework Otus Architect
 * установка postgresql-exporter
   * для БД пользователей `helm install postgres-exporter-users prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-users.yaml`
   * для БД аутентификации/авторизации `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-auth.yaml`
+  * для БД заказов `helm install postgres-exporter-order prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-order.yaml`
+  * для БД счетов `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml`
+  * для БД уведомлений `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`
@@ -111,7 +137,23 @@ Homework Otus Architect
   - Регистрация пользователя 2
   - Логин пользователя 2
   - Проверка профиля пользователя 2
-
+- `Simple Order`:
+  - Регистрация пользователя
+  - Логин пользователя
+  - Получение профиля
+  - Добавление денег на счет
+  - Проверка денег на счету
+  - Создание заказа
+  - Подтверждение оплаты (денег хватает)
+  - Проверка остатка на счету
+  - Проверка отправленного уведомления
+- `Simple Order Not Enough Money`:
+  - Регистрация пользователя
+  - Логин пользователя
+  - Получение профиля
+  - Создание заказа
+  - Подтверждение оплаты (денег не хватает)
+  - Проверка остатка на счету
 
 ## Стресс-тестирование
 * одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`

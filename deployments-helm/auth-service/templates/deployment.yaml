@@ -78,6 +78,16 @@ spec:
                 configMapKeyRef:
                   name: auth-config
                   key: AUTH_AUDIENCE
+            - name: KAFKA_BROKER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: KAFKA_BROKER_HOST
+            - name: KAFKA_BROKER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: KAFKA_BROKER_PORT
           livenessProbe:
             httpGet:
               path: {{ .Values.health.path }}

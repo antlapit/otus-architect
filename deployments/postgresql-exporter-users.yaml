@@ -18,7 +18,7 @@ serviceMonitor:
 
 config:
   datasource:
-    host: user-profile-service-release-postgresql
+    host: postgres-postgresql
     user: users
     password: _ky62W9An32QMXPZ
     port: "5432"

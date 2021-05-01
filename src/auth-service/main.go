@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/antlapit/otus-architect/api/event"
+	"github.com/antlapit/otus-architect/auth-service/core"
+	. "github.com/antlapit/otus-architect/toolbox"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"gitlab.com/antlapit/otus-architect/auth-service/auth"
-	. "gitlab.com/antlapit/otus-architect/toolbox"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
@@ -13,25 +14,34 @@ import (
 
 func main() {
 	serviceMode := os.Getenv("SERVICE_MODE")
-
-	dbConfig := LoadDatabaseConfig()
-
-	db, driver := InitDatabase(dbConfig)
+	db, driver, dbConfig := InitDefaultDatabase()
 
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		var repository = auth.Repository{DB: db}
 
-		authConfig := initAuthConfig(&repository)
+		userEventsMarshaller := NewEventMarshaller(event.AllEvents)
+		kafka := InitKafkaDefault()
+		eventWriter := kafka.StartNewWriter(event.TOPIC_USERS, userEventsMarshaller)
+		var app = core.NewAuthApplication(db, eventWriter)
+
+		authConfig := initAuthConfig(app)
 		engine, jwtMiddleware, secureGroup, publicGroup := InitGin(authConfig, dbConfig)
 
-		initApi(secureGroup, publicGroup, authConfig, jwtMiddleware, &repository)
+		initApi(secureGroup, publicGroup, authConfig, jwtMiddleware, app, eventWriter)
+		initListeners(kafka, userEventsMarshaller, app)
 		engine.Run(":8001")
 	}
 }
 
-func initAuthConfig(repository *auth.Repository) *AuthConfig {
+func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.AuthApplication) {
+	f := func(id string, eventType string, data interface{}) {
+		app.ProcessEvent(id, eventType, data)
+	}
+	kafka.StartNewEventReader(event.TOPIC_USERS, "auth-service", marshaller, f)
+}
+
+func initAuthConfig(app *core.AuthApplication) *AuthConfig {
 	authConfig := LoadAuthConfig()
 	authConfig.Authenticator = func(c *gin.Context) (interface{}, error) {
 		var loginVals login
@@ -41,7 +51,7 @@ func initAuthConfig(repository *auth.Repository) *AuthConfig {
 		userName := loginVals.Username
 		password := loginVals.Password
 
-		user, err := repository.GetByUsername(userName)
+		user, err := app.GetByUsername(userName)
 
 		if err == nil && bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {
 			return &AuthData{
@@ -55,53 +65,48 @@ func initAuthConfig(repository *auth.Repository) *AuthConfig {
 	return authConfig
 }
 
-func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authConfig *AuthConfig, authMiddleware *jwt.GinJWTMiddleware, repository *auth.Repository) {
+func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authConfig *AuthConfig, authMiddleware *jwt.GinJWTMiddleware, app *core.AuthApplication, writer *EventWriter) {
 	publicGroup.POST("/login", LoginHandler(authConfig, authMiddleware))
 	publicGroup.POST("/register", errorHandler, func(context *gin.Context) {
-		createUser(context, repository)
+		submitUserCreationEvent(context, app, writer)
 	})
 
 	secureGroup.Use(errorHandler)
 	secureGroup.GET("/refresh-token", authMiddleware.RefreshHandler)
 	secureGroup.GET("/me", func(context *gin.Context) {
-		getCurrentUser(context, repository)
+		getCurrentUser(context, app)
 	})
 	secureGroup.POST("/change-password", func(context *gin.Context) {
-		changePassword(context, repository)
+		submitChangePasswordEvent(context, app)
 	})
 }
 
-func createUser(context *gin.Context, repository *auth.Repository) {
+func submitUserCreationEvent(context *gin.Context, app *core.AuthApplication, writer *EventWriter) {
 	var loginVals login
 	if err := context.ShouldBindJSON(&loginVals); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
 		return
 	}
 
-	var pass []byte
-	pass, err := bcrypt.GenerateFromPassword([]byte(loginVals.Password), bcrypt.MinCost)
-
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-		return
-	}
-
-	id, err := repository.Create(auth.UserData{
-		Username: loginVals.Username,
-		Password: string(pass),
-	})
+	id, err := app.SubmitUserCreationEvent(loginVals.Username, loginVals.Password)
 	if err != nil {
 		context.Error(err).SetMeta(err)
 	} else {
-		context.JSON(http.StatusCreated, gin.H{
-			"id": id,
-		})
+		if id != "" {
+			context.JSON(http.StatusCreated, gin.H{
+				"id": id,
+			})
+		} else {
+			context.JSON(http.StatusOK, gin.H{
+				"duplicate": true,
+			})
+		}
 	}
 }
 
-func getCurrentUser(context *gin.Context, repository *auth.Repository) {
+func getCurrentUser(context *gin.Context, app *core.AuthApplication) {
 	userName := jwt.ExtractClaims(context)[UserNameKey].(string)
-	user, err := repository.GetByUsername(userName)
+	user, err := app.GetByUsername(userName)
 	if err != nil {
 		AbortErrorResponse(context, http.StatusUnauthorized, err, "DA01")
 		return
@@ -112,25 +117,15 @@ func getCurrentUser(context *gin.Context, repository *auth.Repository) {
 	})
 }
 
-func changePassword(context *gin.Context, repository *auth.Repository) {
+func submitChangePasswordEvent(context *gin.Context, app *core.AuthApplication) {
 	var req changePasswordRequest
 	if err := context.ShouldBindJSON(&req); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+		return
 	} else {
 		userName := jwt.ExtractClaims(context)[UserNameKey].(string)
-		user, err := repository.GetByUsername(userName)
 
-		if err == nil {
-			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword))
-			if err == nil {
-				var pass []byte
-				pass, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.MinCost)
-				if err == nil {
-					_, err = repository.UpdatePassword(user.Id, string(pass))
-				}
-			}
-		}
-
+		_, err := app.SubmitChangePasswordEvent(userName, req.OldPassword, req.NewPassword)
 		if err != nil {
 			AbortErrorResponse(context, http.StatusForbidden, err, "DA01")
 			return
@@ -146,11 +141,11 @@ func errorHandler(context *gin.Context) {
 		if err.Meta != nil {
 			realError := err.Meta.(error)
 			switch realError.(type) {
-			case *auth.UserNotFoundError:
-			case *auth.UserNotFoundByIdError:
+			case *core.UserNotFoundError:
+			case *core.UserNotFoundByIdError:
 				ErrorResponse(context, http.StatusNotFound, err, "BL01")
 				break
-			case *auth.UserInvalidError:
+			case *core.UserInvalidError:
 				ErrorResponse(context, http.StatusConflict, err, "BL02")
 			default:
 				ErrorResponse(context, http.StatusInternalServerError, err, "FA01")

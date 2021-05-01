@@ -79,3 +79,19 @@ func ResponseSerializer(context *gin.Context) {
 		context.JSON(http.StatusOK, res)
 	}
 }
+
+type RequestProcessor func(context *gin.Context) (interface{}, error, bool)
+
+func NewHandlerFunc(rp RequestProcessor) gin.HandlerFunc {
+	return func(context *gin.Context) {
+		res, err, aborted := rp(context)
+		if aborted {
+			return
+		}
+		if err != nil {
+			context.Error(err).SetMeta(err)
+		} else {
+			context.Set("result", res)
+		}
+	}
+}

@@ -30,6 +30,12 @@ func LoadDatabaseConfig() *DatabaseConfig {
 	}
 }
 
+func InitDefaultDatabase() (*sql.DB, database.Driver, *DatabaseConfig) {
+	config := LoadDatabaseConfig()
+	db, driver := InitDatabase(config)
+	return db, driver, config
+}
+
 func InitDatabase(config *DatabaseConfig) (*sql.DB, database.Driver) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		config.Host, config.Port, config.User, config.Password, config.Name)
