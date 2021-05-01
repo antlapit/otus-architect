@@ -39,7 +39,7 @@ Homework Otus Architect
 * `cd src`
 * `docker build -t antlapit/otus-architect-auth-service:v2 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v2 -f Dockerfile.users .`
-* `docker build -t antlapit/otus-architect-order-service:v2 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-order-service:v3 -f Dockerfile.order .`
 * `docker build -t antlapit/otus-architect-billing-service:v2 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v2 -f Dockerfile.notification .`
 
@@ -143,21 +143,17 @@ Homework Otus Architect
   - Получение профиля
   - Добавление денег на счет
   - Проверка денег на счету
-  - Создание заказа 1
+  - Создание заказа
   - Подтверждение оплаты (денег хватает)
-  - Проверка статуса заказа и отправленного уведомления
-  - Создание заказа 2
-  - Попытка подтвердить оплату (денег не хватает)
-  - Проверка статуса заказа и отсутствия уведомления
-- `Reject Order`:
+  - Проверка остатка на счету
+  - Проверка отправленного уведомления
+- `Simple Order Not Enough Money`:
   - Регистрация пользователя
   - Логин пользователя
   - Получение профиля
-  - Добавление денег на счет
-  - Проверка денег на счету
-  - Создание заказа 1
-  - Отмена заказа 1
-  - Проверка статуса заказа и отправленного уведомления
+  - Создание заказа
+  - Подтверждение оплаты (денег не хватает)
+  - Проверка остатка на счету
 
 ## Стресс-тестирование
 * одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`

@@ -59,8 +59,9 @@ func (repository *NotificationRepository) Create(userId int64, orderId int64, ev
 func (repository *NotificationRepository) GetByUserId(userId int64) ([]Notification, error) {
 	db := repository.DB
 	stmt, err := db.Prepare(`SELECT id, user_id, order_id, event_id, event_type, event_data 
-									FROM notification 
-									WHERE user_id = $1`)
+										FROM notification 
+										WHERE user_id = $1
+										ORDER BY id `)
 	if err != nil {
 		return []Notification{}, err
 	}

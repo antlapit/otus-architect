@@ -24,7 +24,7 @@ func main() {
 
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var orderEventWriter = kafka.StartNewWriter(event.TOPIC_BILLING, eventsMarshaller)
+		var orderEventWriter = kafka.StartNewWriter(event.TOPIC_ORDERS, eventsMarshaller)
 		var app = core.NewOrderApplication(db, orderEventWriter)
 		initListeners(kafka, eventsMarshaller, app)
 		initApi(secureGroup, app)

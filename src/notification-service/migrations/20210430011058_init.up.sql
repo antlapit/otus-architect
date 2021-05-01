@@ -16,5 +16,5 @@ create unique index notification_id_uindex
 create index notification_user_id_index
     on notification (user_id);
 
-create index notification_event_uindex
+create unique index notification_event_uindex
     on notification (order_id, event_type);
