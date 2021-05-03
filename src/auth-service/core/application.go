@@ -82,7 +82,9 @@ func (app *AuthApplication) SubmitUserCreationEvent(username string, password st
 	}
 
 	return app.writer.WriteEvent(event.EVENT_USER_CREATED, event.UserCreated{
-		UserId:   userId,
+		BaseUserEvent: event.BaseUserEvent{
+			UserId: userId,
+		},
 		Username: username,
 		Password: string(pass),
 	})
@@ -95,7 +97,9 @@ func (app *AuthApplication) SubmitChangePasswordEvent(userName string, oldPasswo
 		newPass, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.MinCost)
 		if err == nil {
 			return app.writer.WriteEvent(event.EVENT_CHANGE_PASSWORD, event.UserChangePassword{
-				UserId:      user.Id,
+				BaseUserEvent: event.BaseUserEvent{
+					UserId: user.Id,
+				},
 				Username:    userName,
 				OldPassword: oldPassword,
 				NewPassword: string(newPass),

@@ -13,21 +13,25 @@ var UserEvents = map[string]interface{}{
 	EVENT_PROFILE_CHANGED: UserProfileChanged{},
 }
 
+type BaseUserEvent struct {
+	UserId int64 `json:"userId" binding:"required"`
+}
+
 type UserCreated struct {
-	UserId   int64  `json:"userId" binding:"required"`
+	BaseUserEvent
 	Username string `json:"userName" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
 type UserChangePassword struct {
-	UserId      int64  `json:"userId" binding:"required"`
+	BaseUserEvent
 	Username    string `json:"userName" binding:"required"`
 	OldPassword string `json:"oldPassword" binding:"required"`
 	NewPassword string `json:"newPassword" binding:"required"`
 }
 
 type UserProfileChanged struct {
-	UserId    int64  `json:"userId" binding:"required"`
+	BaseUserEvent
 	FirstName string `json:"firstName" binding:"required"`
 	LastName  string `json:"lastName" binding:"required"`
 	Email     string `json:"email" binding:"required"`

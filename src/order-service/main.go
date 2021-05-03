@@ -54,14 +54,7 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	}))
 	ordersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
-
-		var req core.CreateOrderRequest
-		if err := context.ShouldBindJSON(&req); err != nil {
-			AbortErrorResponse(context, http.StatusBadRequest, err, "DA02")
-			return nil, nil, false
-		}
-
-		res, err := app.SubmitOrderCreation(userId, req)
+		res, err := app.SubmitOrderCreation(userId)
 		return res, err, false
 	}))
 
@@ -75,6 +68,31 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	singleOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderReject(userId, orderId)
+		return res, err, false
+	}))
+	singleOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		res, err := app.SubmitOrderConfirm(userId, orderId)
+		return res, err, false
+	}))
+	singleOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		var c orderChange
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+		res, err := app.SubmitOrderAddItem(userId, orderId, c.ProductId, c.Quantity)
+		return res, err, false
+	}))
+	singleOrderRoute.POST("/remove-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		var c orderChange
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+		res, err := app.SubmitOrderRemoveItem(userId, orderId, c.ProductId, c.Quantity)
 		return res, err, false
 	}))
 }
@@ -126,4 +144,9 @@ func orderIdIdExtractor(context *gin.Context) {
 	context.Set("orderId", id)
 
 	context.Next()
+}
+
+type orderChange struct {
+	ProductId int64 `json:"productId" binding:"required"`
+	Quantity  int64 `json:"quantity" binding:"required"`
 }

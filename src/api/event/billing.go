@@ -20,14 +20,16 @@ type MoneyAdded struct {
 	MoneyAdded *big.Float `json:"moneyAdded" binding:"required"`
 }
 
-type PaymentConfirmed struct {
+type BasePaymentEvent struct {
 	BillId    int64 `json:"billId" binding:"required"`
 	OrderId   int64 `json:"orderId" binding:"required"`
 	AccountId int64 `json:"accountId" binding:"required"`
 }
 
+type PaymentConfirmed struct {
+	BasePaymentEvent
+}
+
 type PaymentCompleted struct {
-	BillId    int64 `json:"billId" binding:"required"`
-	OrderId   int64 `json:"orderId" binding:"required"`
-	AccountId int64 `json:"accountId" binding:"required"`
+	BasePaymentEvent
 }

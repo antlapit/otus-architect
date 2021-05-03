@@ -68,7 +68,7 @@ func initAuthConfig(app *core.AuthApplication) *AuthConfig {
 func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authConfig *AuthConfig, authMiddleware *jwt.GinJWTMiddleware, app *core.AuthApplication, writer *EventWriter) {
 	publicGroup.POST("/login", LoginHandler(authConfig, authMiddleware))
 	publicGroup.POST("/register", errorHandler, func(context *gin.Context) {
-		submitUserCreationEvent(context, app, writer)
+		submitUserCreationEvent(context, app)
 	})
 
 	secureGroup.Use(errorHandler)
@@ -81,7 +81,7 @@ func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authCon
 	})
 }
 
-func submitUserCreationEvent(context *gin.Context, app *core.AuthApplication, writer *EventWriter) {
+func submitUserCreationEvent(context *gin.Context, app *core.AuthApplication) {
 	var loginVals login
 	if err := context.ShouldBindJSON(&loginVals); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")

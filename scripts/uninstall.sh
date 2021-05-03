@@ -40,3 +40,6 @@ kubectl delete clusterrolebinding psp-prom-prometheus-node-exporter
 
 kubectl delete job auth-service-release
 kubectl delete job user-profile-service-release
+kubectl delete job order-service-release
+kubectl delete job billing-service-release
+kubectl delete job notification-service-release

@@ -41,11 +41,8 @@ func (c *BillingApplication) ProcessEvent(id string, eventType string, data inte
 	case event.PaymentCompleted:
 		c.completePayment(data.(event.PaymentCompleted))
 		break
-	case event.OrderCreated:
-		c.createBillForOrder(data.(event.OrderCreated))
-		break
-	case event.OrderRejected:
-		c.rejectPayment(data.(event.OrderRejected))
+	case event.OrderConfirmed:
+		c.createBillForOrder(data.(event.OrderConfirmed))
 		break
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
@@ -85,9 +82,11 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 		log.Error("Cannot confirm payment")
 	}
 	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_COMPLETED, event.PaymentCompleted{
-		BillId:    bill.Id,
-		OrderId:   bill.OrderId,
-		AccountId: bill.AccountId,
+		BasePaymentEvent: event.BasePaymentEvent{
+			BillId:    bill.Id,
+			OrderId:   bill.OrderId,
+			AccountId: bill.AccountId,
+		},
 	})
 	if err != nil {
 		log.Error("Error confirming payment")
@@ -111,24 +110,6 @@ func (c *BillingApplication) completePayment(data event.PaymentCompleted) {
 	}
 	if !res {
 		log.Error("Cannot complete payment")
-	}
-}
-
-func (c *BillingApplication) rejectPayment(data event.OrderRejected) {
-	bill, err := c.billRepository.GetByOrderId(data.OrderId)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if bill.Status != "NEW" {
-		return
-	}
-	res, err := c.billRepository.Reject(bill.Id)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	if !res {
-		log.Error("Cannot reject payment")
 	}
 }
 
@@ -173,9 +154,11 @@ func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billI
 	}
 
 	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_CONFIRMED, event.PaymentConfirmed{
-		BillId:    bill.Id,
-		OrderId:   bill.OrderId,
-		AccountId: bill.AccountId,
+		BasePaymentEvent: event.BasePaymentEvent{
+			BillId:    bill.Id,
+			OrderId:   bill.OrderId,
+			AccountId: bill.AccountId,
+		},
 	})
 	if err != nil {
 		log.Error("Error confirming payment")
@@ -186,7 +169,7 @@ func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billI
 	}
 }
 
-func (c *BillingApplication) createBillForOrder(data event.OrderCreated) {
+func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
 	account, err := c.accountRepository.GetByUserId(data.UserId)
 	if err != nil {
 		log.Error("Error creating order")

@@ -39,19 +39,26 @@ func (error *OrderInvalidError) Error() string {
 	return error.message
 }
 
+const (
+	StatusNew       = "NEW"
+	StatusConfirmed = "CONFIRMED"
+	StatusCompleted = "COMPLETED"
+	StatusRejected  = "REJECTED"
+)
+
 func (repository *OrderRepository) Create(userId int64, orderId int64, amount *big.Float) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`INSERT INTO orders(id, user_id, status, amount) 
-				VALUES($1, $2, 'NEW', $3)`,
+				VALUES($1, $2, $3, $4)`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, userId, amount.String())
+	res, err := stmt.Exec(orderId, userId, StatusNew, amount.String())
 	if err != nil {
 		return false, err
 	}
@@ -110,47 +117,32 @@ func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
 	}
 }
 
+func (repository *OrderRepository) Confirm(orderId int64) (bool, error) {
+	return repository.updateOrderState(orderId, StatusNew, StatusConfirmed)
+}
+
 func (repository *OrderRepository) Reject(orderId int64) (bool, error) {
-	db := repository.DB
-
-	stmt, err := db.Prepare(
-		`UPDATE orders
-				SET status = 'REJECTED'
-				WHERE id = $1 AND status = 'NEW'`,
-	)
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.Exec(orderId)
-	if err != nil {
-		return false, err
-	}
-	affectedRows, err := res.RowsAffected()
-	if err != nil {
-		return false, &OrderInvalidError{err.Error()}
-	} else if affectedRows == 0 {
-		return false, &OrderNotFoundError{id: orderId}
-	} else {
-		return true, nil
-	}
+	return repository.updateOrderState(orderId, StatusNew, StatusRejected)
 }
 
 func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
+	return repository.updateOrderState(orderId, StatusConfirmed, StatusCompleted)
+}
+
+func (repository *OrderRepository) updateOrderState(orderId int64, from string, to string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = 'COMPLETED'
-				WHERE id = $1 AND status = 'NEW'`,
+				SET status = $1
+				WHERE id = $2 AND status = $3`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId)
+	res, err := stmt.Exec(to, orderId, from)
 	if err != nil {
 		return false, err
 	}
