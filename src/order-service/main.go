@@ -43,39 +43,39 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	secureGroup.Use(errorHandler)
 
-	ordersRoute := secureGroup.Group("/users/:id/orders")
-	ordersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	userOrdersRoute := secureGroup.Group("/users/:id/orders")
+	userOrdersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
 
-	ordersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	userOrdersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 
 		res, err := app.GetAllOrdersByUserId(userId)
 		return res, err, false
 	}))
-	ordersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	userOrdersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 		res, err := app.SubmitOrderCreation(userId)
 		return res, err, false
 	}))
 
-	singleOrderRoute := ordersRoute.Group("/:orderId")
-	singleOrderRoute.Use(orderIdIdExtractor)
-	singleOrderRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute := userOrdersRoute.Group("/:orderId")
+	singleUserOrderRoute.Use(orderIdIdExtractor)
+	singleUserOrderRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.GetOrder(userId, orderId)
 		return res, err, false
 	}))
-	singleOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderReject(userId, orderId)
 		return res, err, false
 	}))
-	singleOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderConfirm(userId, orderId)
 		return res, err, false
 	}))
-	singleOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		var c orderChange
 		if err := context.ShouldBindJSON(&c); err != nil {
@@ -85,7 +85,7 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 		res, err := app.SubmitOrderAddItem(userId, orderId, c.ProductId, c.Quantity)
 		return res, err, false
 	}))
-	singleOrderRoute.POST("/remove-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute.POST("/remove-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		var c orderChange
 		if err := context.ShouldBindJSON(&c); err != nil {

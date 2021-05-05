@@ -15,7 +15,7 @@ type Order struct {
 	Id     int64      `json:"orderId"`
 	UserId int64      `json:"userId" binding:"required"`
 	Status string     `json:"status" binding:"required"`
-	Amount *big.Float `json:"total" binding:"required"`
+	Total  *big.Float `json:"total" binding:"required"`
 }
 
 type OrderNotFoundError struct {
@@ -46,11 +46,11 @@ const (
 	StatusRejected  = "REJECTED"
 )
 
-func (repository *OrderRepository) Create(userId int64, orderId int64, amount *big.Float) (bool, error) {
+func (repository *OrderRepository) Create(userId int64, orderId int64, total *big.Float) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO orders(id, user_id, status, amount) 
+		`INSERT INTO orders(id, user_id, status, total) 
 				VALUES($1, $2, $3, $4)`,
 	)
 	if err != nil {
@@ -58,7 +58,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, amount *b
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, userId, StatusNew, amount.String())
+	res, err := stmt.Exec(orderId, userId, StatusNew, total.String())
 	if err != nil {
 		return false, err
 	}
@@ -72,7 +72,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, amount *b
 
 func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, user_id, status, amount FROM orders WHERE id = $1")
+	stmt, err := db.Prepare("SELECT id, user_id, status, total FROM orders WHERE id = $1")
 	if err != nil {
 		return Order{}, err
 	}
@@ -81,7 +81,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	var order Order
 	var totalVal sql.NullFloat64
 	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
-	order.Amount = big.NewFloat(totalVal.Float64)
+	order.Total = big.NewFloat(totalVal.Float64)
 	if err != nil {
 		// constraints
 		return Order{}, &OrderNotFoundError{id: orderId}
@@ -92,7 +92,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 
 func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare(`SELECT id, user_id, status, amount 
+	stmt, err := db.Prepare(`SELECT id, user_id, status, total 
 									FROM orders 
 									WHERE user_id = $1`)
 	if err != nil {
@@ -110,7 +110,7 @@ func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
 			var order Order
 			var totalVal sql.NullFloat64
 			rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
-			order.Amount = big.NewFloat(totalVal.Float64)
+			order.Total = big.NewFloat(totalVal.Float64)
 			result = append(result, order)
 		}
 		return result, nil
@@ -129,7 +129,7 @@ func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
 	return repository.updateOrderState(orderId, StatusConfirmed, StatusCompleted)
 }
 
-func (repository *OrderRepository) updateOrderState(orderId int64, from string, to string) (bool, error) {
+func (repository *OrderRepository) updateOrderState(orderId int64, fromState string, toState string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
@@ -142,7 +142,7 @@ func (repository *OrderRepository) updateOrderState(orderId int64, from string, 
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(to, orderId, from)
+	res, err := stmt.Exec(toState, orderId, fromState)
 	if err != nil {
 		return false, err
 	}
@@ -165,4 +165,31 @@ func (repository *OrderRepository) GetNextOrderId() (int64, error) {
 	}
 
 	return id, nil
+}
+
+func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE orders
+				SET total = total + $1
+				WHERE id = $2 AND status = $3`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(total, orderId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &OrderInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &OrderNotFoundError{id: orderId}
+	} else {
+		return true, nil
+	}
 }

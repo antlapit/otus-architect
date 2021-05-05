@@ -32,8 +32,8 @@ type OrderCreated struct {
 
 type OrderConfirmed struct {
 	BaseOrderEvent
-	Amount *big.Float `json:"amount" binding:"required"`
-	Items  []OrderItem
+	Total *big.Float `json:"total" binding:"required"`
+	Items []OrderItem
 }
 
 type OrderRejected struct {
@@ -42,8 +42,8 @@ type OrderRejected struct {
 
 type OrderCompleted struct {
 	BaseOrderEvent
-	Amount *big.Float `json:"amount" binding:"required"`
-	Items  []OrderItem
+	Total *big.Float `json:"total" binding:"required"`
+	Items []OrderItem
 }
 
 type OrderItem struct {

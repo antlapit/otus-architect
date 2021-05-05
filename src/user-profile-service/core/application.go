@@ -21,8 +21,8 @@ func NewUserApplication(db *sql.DB, writer *toolbox.EventWriter) *UserApplicatio
 	}
 }
 
-func (app *UserApplication) GetById(userId int64) (UserData, error) {
-	return app.repository.Get(userId)
+func (app *UserApplication) GetByUserId(userId int64) (UserData, error) {
+	return app.repository.GetByUserId(userId)
 }
 
 func (app *UserApplication) SubmitProfileChangeEvent(userId int64, userData UserData) (string, error) {

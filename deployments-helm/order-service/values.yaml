@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: antlapit/otus-architect-order-service
   pullPolicy: IfNotPresent
-  tag: "v3"
+  tag: "v4"
 
 nameOverride: order-service
 fullnameOverride: "order-service"

@@ -85,7 +85,7 @@
           ],
           "method": "POST",
           "encoding": "json",
-          "url_pattern": "/user/{JWT.sub}"
+          "url_pattern": "/profiles/by-user-id/{JWT.sub}"
         }
       ],
       "extra_config": {
@@ -147,7 +147,7 @@
             "http://user-profile-service:8000"
           ],
           "encoding": "json",
-          "url_pattern": "/user/{JWT.sub}"
+          "url_pattern": "/profiles/by-user-id/{JWT.sub}"
         },
         {
           "host": [
@@ -194,7 +194,7 @@
             "http://user-profile-service:8000"
           ],
           "encoding": "no-op",
-          "url_pattern": "/user/{JWT.sub}"
+          "url_pattern": "/profiles/by-user-id/{JWT.sub}"
         }
       ],
       "extra_config": {

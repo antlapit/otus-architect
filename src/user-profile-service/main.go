@@ -39,11 +39,11 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Us
 }
 
 func initUsersApi(secureGroup *gin.RouterGroup, app *core.UserApplication) {
-	singleUserRoute := secureGroup.Group("/user/:id")
+	singleUserRoute := secureGroup.Group("/profiles/by-user-id/:id")
 	singleUserRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
 	singleUserRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
-		user, err := app.GetById(userId)
+		user, err := app.GetByUserId(userId)
 		return user, err, false
 	}))
 	singleUserRoute.POST("", userDataExtractor, NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {

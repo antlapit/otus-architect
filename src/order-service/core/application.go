@@ -11,15 +11,20 @@ import (
 
 type OrderApplication struct {
 	orderRepository  *OrderRepository
+	itemRepository   *ItemRepository
 	orderEventWriter *toolbox.EventWriter
+	productsCatalog  *ProductsCatalog
 }
 
 func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *OrderApplication {
-	var repository = &OrderRepository{DB: db}
+	var orderRepository = &OrderRepository{DB: db}
+	var itemRepository = &ItemRepository{DB: db}
 
 	return &OrderApplication{
-		orderRepository:  repository,
+		orderRepository:  orderRepository,
+		itemRepository:   itemRepository,
 		orderEventWriter: orderEventWriter,
+		productsCatalog:  &ProductsCatalog{},
 	}
 }
 
@@ -75,7 +80,7 @@ func (c *OrderApplication) SubmitOrderConfirm(userId int64, orderId int64) (inte
 			OrderId: order.Id,
 			UserId:  order.UserId,
 		},
-		Amount: order.Amount,
+		Total: order.Total,
 	})
 }
 
@@ -146,7 +151,7 @@ func (c *OrderApplication) ProcessEvent(id string, eventType string, data interf
 }
 
 func (c *OrderApplication) createOrder(data event.OrderCreated) {
-	success, err := c.orderRepository.Create(data.UserId, data.OrderId, big.NewFloat(0))
+	success, err := c.orderRepository.Create(data.UserId, data.OrderId, new(big.Float))
 	if err != nil || !success {
 		log.Error("Error creating order")
 		return
@@ -169,7 +174,7 @@ func (c *OrderApplication) completeOrder(data event.PaymentCompleted) {
 			OrderId: order.Id,
 			UserId:  order.UserId,
 		},
-		Amount: order.Amount,
+		Total: order.Total,
 	})
 	if err != nil {
 		log.Error(err.Error())
@@ -231,10 +236,25 @@ func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) {
 		return
 	}
 
-	// TODO add items
+	total := new(big.Float)
+	for _, item := range data.Items {
+		_, err = c.itemRepository.AddItems(order.Id, item.ProductId, item.Quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+		price := c.productsCatalog.GetPrice(item.ProductId)
+		quantPrice := new(big.Float).Mul(price, big.NewFloat(float64(item.Quantity))).SetPrec(2)
+		total = total.Add(total, quantPrice)
+	}
+	_, err = c.orderRepository.ModifyTotal(order.Id, total)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 }
 
-func (c *OrderApplication) removeOrderItems(data event.OrderItemsAdded) {
+func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
@@ -245,5 +265,20 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsAdded) {
 		return
 	}
 
-	// TODO add items
+	total := new(big.Float)
+	for _, item := range data.Items {
+		_, err = c.itemRepository.RemoveItems(order.Id, item.ProductId, item.Quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+		price := c.productsCatalog.GetPrice(item.ProductId)
+		quantPrice := new(big.Float).Neg(new(big.Float).Mul(price, big.NewFloat(float64(item.Quantity))).SetPrec(2))
+		total = total.Add(total, quantPrice)
+	}
+	_, err = c.orderRepository.ModifyTotal(order.Id, total)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 }

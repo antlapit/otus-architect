@@ -66,7 +66,7 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 	if bill.Status != "CREATED" {
 		return
 	}
-	res, err := c.accountRepository.DecreaseMoneyById(data.AccountId, bill.Total)
+	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(bill.Total))
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -175,7 +175,7 @@ func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
 		log.Error("Error creating order")
 		return
 	}
-	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Amount)
+	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Total)
 	if err != nil {
 		log.Error(err.Error())
 	}
