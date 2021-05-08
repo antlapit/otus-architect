@@ -50,7 +50,9 @@ func initUsersApi(secureGroup *gin.RouterGroup, app *core.UserApplication) {
 		userId := context.GetInt64("userId")
 		userData := context.MustGet("userData").(core.UserData)
 		res, err := app.SubmitProfileChangeEvent(userId, userData)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 }
 

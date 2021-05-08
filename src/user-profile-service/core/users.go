@@ -7,7 +7,7 @@ import (
 )
 
 type UserData struct {
-	Id        int64  `json:"id"`
+	Id        int64  `json:"profileId"`
 	UserId    int64  `json:"userId"`
 	FirstName string `json:"firstName" binding:"required"`
 	LastName  string `json:"lastName" binding:"required"`
@@ -69,12 +69,28 @@ func (repository *Repository) GetByUserId(userId int64) (UserData, error) {
 	defer stmt.Close()
 
 	var userData UserData
-	err = stmt.QueryRow(userId).Scan(&userData.Id, &userData.FirstName, &userData.LastName, &userData.Email, &userData.Phone)
+	var firstName sql.NullString
+	var lastName sql.NullString
+	var email sql.NullString
+	var phone sql.NullString
+	err = stmt.QueryRow(userId).Scan(&userData.Id, &userData.UserId, &firstName, &lastName, &email, &phone)
 	if err != nil {
 		// constraints
 		return UserData{}, &UserProfileNotFoundError{userId: userId}
 	}
 
+	if firstName.Valid {
+		userData.FirstName = firstName.String
+	}
+	if lastName.Valid {
+		userData.LastName = lastName.String
+	}
+	if email.Valid {
+		userData.Email = email.String
+	}
+	if phone.Valid {
+		userData.Phone = phone.String
+	}
 	return userData, nil
 }
 

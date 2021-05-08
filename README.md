@@ -23,6 +23,7 @@ Homework Otus Architect
 - Изменение пароля и изменения профиля являются разными операциями и выражены разными методами в API
 - Определение ИД пользователя при роутинге запросов к сервису User Profile Service выполняется на шлюзе из JWT токена
 - Большинство обработчиков событий - идемпотентны (к примеру, обработчик событий по заказам в сервисе уведомлений проверяет, что уведомление определенного типа для заказа еще не отправлялось)
+- Цены на товары генерируются рандомом в сервисе Orders Service
 
 ## Сценарии
 ### Работа с заказом
@@ -37,11 +38,11 @@ Homework Otus Architect
 
 ## Сборка
 * `cd src`
-* `docker build -t antlapit/otus-architect-auth-service:v3 -f Dockerfile.auth .`
+* `docker build -t antlapit/otus-architect-auth-service:v4 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v3 -f Dockerfile.users .`
 * `docker build -t antlapit/otus-architect-order-service:v4 -f Dockerfile.order .`
 * `docker build -t antlapit/otus-architect-billing-service:v3 -f Dockerfile.billing .`
-* `docker build -t antlapit/otus-architect-notification-service:v3 -f Dockerfile.notification .`
+* `docker build -t antlapit/otus-architect-notification-service:v4 -f Dockerfile.notification .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -137,7 +138,7 @@ Homework Otus Architect
   - Регистрация пользователя 2
   - Логин пользователя 2
   - Проверка профиля пользователя 2
-- `Simple Order`:
+- `Full Order Scenario`:
   - Регистрация пользователя
   - Логин пользователя
   - Получение профиля
@@ -147,15 +148,21 @@ Homework Otus Architect
   - Подтверждение оплаты (денег хватает)
   - Проверка остатка на счету
   - Проверка отправленного уведомления
-- `Simple Order Not Enough Money`:
+- `Order Not Enough Money`:
   - Регистрация пользователя
   - Логин пользователя
   - Получение профиля
   - Создание заказа
   - Подтверждение оплаты (денег не хватает)
   - Проверка остатка на счету
+- `Admin Orders`:
+  - Регистрация администратора
+  - Логин администратора
+  - Попытка получить профиль (доступа нет)
+  - Получение списка заказов
 
-## Стресс-тестирование
+## Deprecated
+### Стресс-тестирование
 * одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`
 * для проверки 5хх ошибок во время тестирования имитировал "падение" БД
 

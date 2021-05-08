@@ -82,11 +82,9 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 		log.Error("Cannot confirm payment")
 	}
 	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_COMPLETED, event.PaymentCompleted{
-		BasePaymentEvent: event.BasePaymentEvent{
-			BillId:    bill.Id,
-			OrderId:   bill.OrderId,
-			AccountId: bill.AccountId,
-		},
+		BillId:    bill.Id,
+		OrderId:   bill.OrderId,
+		AccountId: bill.AccountId,
 	})
 	if err != nil {
 		log.Error("Error confirming payment")
@@ -154,11 +152,9 @@ func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billI
 	}
 
 	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_CONFIRMED, event.PaymentConfirmed{
-		BasePaymentEvent: event.BasePaymentEvent{
-			BillId:    bill.Id,
-			OrderId:   bill.OrderId,
-			AccountId: bill.AccountId,
-		},
+		BillId:    bill.Id,
+		OrderId:   bill.OrderId,
+		AccountId: bill.AccountId,
 	})
 	if err != nil {
 		log.Error("Error confirming payment")

@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: antlapit/otus-architect-auth-service
   pullPolicy: IfNotPresent
-  tag: "v3"
+  tag: "v4"
 
 nameOverride: auth-service
 fullnameOverride: "auth-service"

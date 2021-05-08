@@ -109,7 +109,10 @@ func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
 		for rows.Next() {
 			var order Order
 			var totalVal sql.NullFloat64
-			rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
+			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
+			if err != nil {
+				return []Order{}, err
+			}
 			order.Total = big.NewFloat(totalVal.Float64)
 			result = append(result, order)
 		}
@@ -173,14 +176,14 @@ func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) 
 	stmt, err := db.Prepare(
 		`UPDATE orders
 				SET total = total + $1
-				WHERE id = $2 AND status = $3`,
+				WHERE id = $2`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(total, orderId)
+	res, err := stmt.Exec(total.String(), orderId)
 	if err != nil {
 		return false, err
 	}

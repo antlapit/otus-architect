@@ -55,7 +55,9 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	userOrdersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 		res, err := app.SubmitOrderCreation(userId)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 
 	singleUserOrderRoute := userOrdersRoute.Group("/:orderId")
@@ -68,12 +70,16 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	singleUserOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderReject(userId, orderId)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 	singleUserOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderConfirm(userId, orderId)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 	singleUserOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
@@ -83,7 +89,9 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 			return nil, nil, true
 		}
 		res, err := app.SubmitOrderAddItem(userId, orderId, c.ProductId, c.Quantity)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 	singleUserOrderRoute.POST("/remove-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
@@ -93,7 +101,9 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 			return nil, nil, true
 		}
 		res, err := app.SubmitOrderRemoveItem(userId, orderId, c.ProductId, c.Quantity)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 }
 

@@ -27,9 +27,7 @@ func (app *UserApplication) GetByUserId(userId int64) (UserData, error) {
 
 func (app *UserApplication) SubmitProfileChangeEvent(userId int64, userData UserData) (string, error) {
 	return app.writer.WriteEvent(event.EVENT_PROFILE_CHANGED, event.UserProfileChanged{
-		BaseUserEvent: event.BaseUserEvent{
-			UserId: userId,
-		},
+		UserId:    userId,
 		FirstName: userData.FirstName,
 		LastName:  userData.LastName,
 		Email:     userData.Email,

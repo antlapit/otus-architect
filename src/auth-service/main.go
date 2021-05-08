@@ -57,6 +57,7 @@ func initAuthConfig(app *core.AuthApplication) *AuthConfig {
 			return &AuthData{
 				Id:       user.Id,
 				UserName: userName,
+				Role:     user.Role,
 			}, nil
 		} else {
 			return nil, jwt.ErrFailedAuthentication
@@ -68,7 +69,10 @@ func initAuthConfig(app *core.AuthApplication) *AuthConfig {
 func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authConfig *AuthConfig, authMiddleware *jwt.GinJWTMiddleware, app *core.AuthApplication, writer *EventWriter) {
 	publicGroup.POST("/login", LoginHandler(authConfig, authMiddleware))
 	publicGroup.POST("/register", errorHandler, func(context *gin.Context) {
-		submitUserCreationEvent(context, app)
+		submitAnyUserCreationEvent(context, app, false)
+	})
+	publicGroup.POST("/register-admin", errorHandler, func(context *gin.Context) {
+		submitAnyUserCreationEvent(context, app, true)
 	})
 
 	secureGroup.Use(errorHandler)
@@ -81,14 +85,14 @@ func initApi(secureGroup *gin.RouterGroup, publicGroup *gin.RouterGroup, authCon
 	})
 }
 
-func submitUserCreationEvent(context *gin.Context, app *core.AuthApplication) {
+func submitAnyUserCreationEvent(context *gin.Context, app *core.AuthApplication, isAdmin bool) {
 	var loginVals login
 	if err := context.ShouldBindJSON(&loginVals); err != nil {
 		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
 		return
 	}
 
-	id, err := app.SubmitUserCreationEvent(loginVals.Username, loginVals.Password)
+	id, err := app.SubmitUserCreationEvent(loginVals.Username, loginVals.Password, isAdmin)
 	if err != nil {
 		context.Error(err).SetMeta(err)
 	} else {

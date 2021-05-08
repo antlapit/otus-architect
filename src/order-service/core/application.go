@@ -48,10 +48,8 @@ func (c *OrderApplication) SubmitOrderCreation(userId int64) (interface{}, error
 	}
 
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_CREATED, event.OrderCreated{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: newId,
-			UserId:  userId,
-		},
+		OrderId: newId,
+		UserId:  userId,
 	})
 }
 
@@ -62,10 +60,8 @@ func (c *OrderApplication) SubmitOrderReject(userId int64, orderId int64) (inter
 	}
 
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_REJECTED, event.OrderRejected{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: order.Id,
-			UserId:  order.UserId,
-		},
+		OrderId: order.Id,
+		UserId:  order.UserId,
 	})
 }
 
@@ -76,11 +72,9 @@ func (c *OrderApplication) SubmitOrderConfirm(userId int64, orderId int64) (inte
 	}
 
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_CONFIRMED, event.OrderConfirmed{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: order.Id,
-			UserId:  order.UserId,
-		},
-		Total: order.Total,
+		OrderId: order.Id,
+		UserId:  order.UserId,
+		Total:   order.Total,
 	})
 }
 
@@ -91,10 +85,8 @@ func (c *OrderApplication) SubmitOrderAddItem(userId int64, orderId int64, produ
 	}
 
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_ITEMS_ADDED, event.OrderItemsAdded{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: order.Id,
-			UserId:  order.UserId,
-		},
+		OrderId: order.Id,
+		UserId:  order.UserId,
 		Items: []event.OrderItem{
 			{
 				ProductId: productId,
@@ -111,10 +103,8 @@ func (c *OrderApplication) SubmitOrderRemoveItem(userId int64, orderId int64, pr
 	}
 
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_ITEMS_REMOVED, event.OrderItemsRemoved{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: order.Id,
-			UserId:  order.UserId,
-		},
+		OrderId: order.Id,
+		UserId:  order.UserId,
 		Items: []event.OrderItem{
 			{
 				ProductId: productId,
@@ -170,11 +160,9 @@ func (c *OrderApplication) completeOrder(data event.PaymentCompleted) {
 	}
 
 	_, err = c.orderEventWriter.WriteEvent(event.EVENT_ORDER_COMPLETED, event.OrderCompleted{
-		BaseOrderEvent: event.BaseOrderEvent{
-			OrderId: order.Id,
-			UserId:  order.UserId,
-		},
-		Total: order.Total,
+		OrderId: order.Id,
+		UserId:  order.UserId,
+		Total:   order.Total,
 	})
 	if err != nil {
 		log.Error(err.Error())

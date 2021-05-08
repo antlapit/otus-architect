@@ -21,42 +21,43 @@ var OrderEvents = map[string]interface{}{
 	EVENT_ORDER_ITEMS_REMOVED: OrderItemsRemoved{},
 }
 
-type BaseOrderEvent struct {
+type OrderCreated struct {
 	OrderId int64 `json:"orderId" binding:"required"`
 	UserId  int64 `json:"userId" binding:"required"`
 }
 
-type OrderCreated struct {
-	BaseOrderEvent
-}
-
 type OrderConfirmed struct {
-	BaseOrderEvent
-	Total *big.Float `json:"total" binding:"required"`
-	Items []OrderItem
+	OrderId int64      `json:"orderId" binding:"required"`
+	UserId  int64      `json:"userId" binding:"required"`
+	Total   *big.Float `json:"total" binding:"required"`
+	Items   []OrderItem
 }
 
 type OrderRejected struct {
-	BaseOrderEvent
+	OrderId int64 `json:"orderId" binding:"required"`
+	UserId  int64 `json:"userId" binding:"required"`
 }
 
 type OrderCompleted struct {
-	BaseOrderEvent
-	Total *big.Float `json:"total" binding:"required"`
-	Items []OrderItem
+	OrderId int64      `json:"orderId" binding:"required"`
+	UserId  int64      `json:"userId" binding:"required"`
+	Total   *big.Float `json:"total" binding:"required"`
+	Items   []OrderItem
 }
 
 type OrderItem struct {
-	ProductId int64 `json:"orderId" binding:"required"`
-	Quantity  int64 `json:"userId" binding:"required"`
+	ProductId int64 `json:"productId" binding:"required"`
+	Quantity  int64 `json:"quantity" binding:"required"`
 }
 
 type OrderItemsAdded struct {
-	BaseOrderEvent
-	Items []OrderItem
+	OrderId int64 `json:"orderId" binding:"required"`
+	UserId  int64 `json:"userId" binding:"required"`
+	Items   []OrderItem
 }
 
 type OrderItemsRemoved struct {
-	BaseOrderEvent
-	Items []OrderItem
+	OrderId int64 `json:"orderId" binding:"required"`
+	UserId  int64 `json:"userId" binding:"required"`
+	Items   []OrderItem
 }

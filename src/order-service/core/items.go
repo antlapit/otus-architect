@@ -13,7 +13,7 @@ func (repository *ItemRepository) AddItems(orderId int64, productId int64, quant
 		`INSERT INTO items(order_id, product_id, quantity) 
 				VALUES($1, $2, $3) 
 				ON CONFLICT (order_id, product_id) DO UPDATE
-				SET quantity = quantity + $3`,
+				SET quantity = items.quantity + $3`,
 	)
 	if err != nil {
 		return false, err
