@@ -39,9 +39,9 @@ Homework Otus Architect
 ## Сборка
 * `cd src`
 * `docker build -t antlapit/otus-architect-auth-service:v4 -f Dockerfile.auth .`
-* `docker build -t antlapit/otus-architect-user-profile-service:v3 -f Dockerfile.users .`
+* `docker build -t antlapit/otus-architect-user-profile-service:v4 -f Dockerfile.users .`
 * `docker build -t antlapit/otus-architect-order-service:v4 -f Dockerfile.order .`
-* `docker build -t antlapit/otus-architect-billing-service:v3 -f Dockerfile.billing .`
+* `docker build -t antlapit/otus-architect-billing-service:v4 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v4 -f Dockerfile.notification .`
 
 ## API

@@ -5,6 +5,7 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 )
@@ -93,5 +94,38 @@ func NewHandlerFunc(rp RequestProcessor) gin.HandlerFunc {
 		} else {
 			context.Set("result", res)
 		}
+	}
+}
+
+func GetQueryInt64Array(context *gin.Context, key string) []int64 {
+	params, _ := context.GetQueryArray(key)
+	if len(params) > 0 {
+		var out []int64
+		for _, param := range params {
+			parsed, err := strconv.ParseInt(param, 10, 0)
+			if err == nil {
+				out = append(out, parsed)
+			}
+		}
+		return out
+	} else {
+		return []int64{}
+	}
+}
+
+func GetQueryBigFloat(context *gin.Context, key string) *big.Float {
+	return big.NewFloat(float64(GetQueryInt64(context, key)))
+}
+
+func GetQueryInt64(context *gin.Context, key string) int64 {
+	v, b := context.GetQuery(key)
+	if b {
+		res, err := strconv.ParseInt(v, 10, 0)
+		if err != nil {
+			return 0
+		}
+		return res
+	} else {
+		return 0
 	}
 }

@@ -5,6 +5,7 @@ replace github.com/antlapit/otus-architect/toolbox => ../toolbox
 replace github.com/antlapit/otus-architect/api => ../api
 
 require (
+	github.com/Masterminds/squirrel v1.5.0
 	github.com/antlapit/otus-architect/api v1.0.0
 	github.com/antlapit/otus-architect/toolbox v1.0.0
 	github.com/appleboy/gin-jwt/v2 v2.6.4

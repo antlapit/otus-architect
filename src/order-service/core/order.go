@@ -3,6 +3,7 @@ package core
 import (
 	"database/sql"
 	"fmt"
+	sq "github.com/Masterminds/squirrel"
 	"math/big"
 	"strconv"
 )
@@ -90,22 +91,23 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	return order, nil
 }
 
-func (repository *OrderRepository) GetByUserId(userId int64) ([]Order, error) {
+func (repository *OrderRepository) GetByFilter(filter OrderFilter) ([]Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare(`SELECT id, user_id, status, total 
-									FROM orders 
-									WHERE user_id = $1`)
+
+	query, values, err := prepareQuery(filter)
+
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		return []Order{}, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userId)
+	rows, err := stmt.Query(values...)
 	if err != nil {
 		// constraints
 		return []Order{}, err
 	} else {
-		var result []Order = make([]Order, 0)
+		var result = make([]Order, 0)
 		for rows.Next() {
 			var order Order
 			var totalVal sql.NullFloat64
@@ -195,4 +197,32 @@ func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) 
 	} else {
 		return true, nil
 	}
+}
+
+func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	predicate := sq.And{}
+	if len(filter.Id) > 0 {
+		predicate = append(predicate, sq.Eq{"id": filter.Id})
+	}
+	if len(filter.UserId) > 0 {
+		predicate = append(predicate, sq.Eq{"user_id": filter.UserId})
+	}
+	if len(filter.Status) > 0 {
+		predicate = append(predicate, sq.Eq{"status": filter.Status})
+	}
+	if filter.TotalFrom != nil {
+		predicate = append(predicate, sq.GtOrEq{"total": filter.TotalFrom.String()})
+	}
+	if filter.TotalTo != nil {
+		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
+	}
+
+	qBuilder := psql.Select("id", "user_id", "status", "total").From("orders").
+		Where(predicate)
+
+	qBuilder = qBuilder.Limit(filter.PageSize).
+		Offset(filter.PageSize * filter.PageNumber)
+	return qBuilder.ToSql()
 }

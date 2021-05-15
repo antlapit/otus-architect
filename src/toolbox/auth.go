@@ -41,6 +41,11 @@ const (
 	RoleKey     string = "auth_role"
 )
 
+const (
+	RoleAdmin string = "ADMIN"
+	RoleUser  string = "USER"
+)
+
 func LoadAuthConfig() *AuthConfig {
 	authTimeoutEnv, exists := os.LookupEnv("AUTH_TIMEOUT")
 	var authTimeout time.Duration

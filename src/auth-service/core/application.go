@@ -13,11 +13,6 @@ type AuthApplication struct {
 	writer     *EventWriter
 }
 
-const (
-	RoleAdmin = "ADMIN"
-	RoleUser  = "USER"
-)
-
 func NewAuthApplication(db *sql.DB, writer *EventWriter) *AuthApplication {
 	var repository = &Repository{DB: db}
 

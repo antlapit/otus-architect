@@ -105,6 +105,23 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 			"eventId": res,
 		}, err, false
 	}))
+
+	allOrdersRoute := secureGroup.Group("/orders")
+	allOrdersRoute.Use(checkAdminPermissions, errorHandler, ResponseSerializer)
+	allOrdersRoute.GET("", NewHandlerFunc(func(c *gin.Context) (interface{}, error, bool) {
+		filter := core.OrderFilter{}
+
+		filter.Id = GetQueryInt64Array(c, "id")
+		filter.UserId = GetQueryInt64Array(c, "userId")
+		filter.Status = c.QueryArray("status")
+		filter.TotalFrom = GetQueryBigFloat(c, "totalFrom")
+		filter.TotalTo = GetQueryBigFloat(c, "totalTo")
+
+		filter.Pageable.PageNumber = uint64(GetQueryInt64(c, "paging.page"))
+		filter.Pageable.PageSize = uint64(GetQueryInt64(c, "paging.size"))
+		res, err := app.GetAllOrders(filter)
+		return res, err, false
+	}))
 }
 
 func errorHandler(context *gin.Context) {
@@ -128,6 +145,15 @@ func checkUserPermissions(context *gin.Context) {
 	userId := float64(context.GetInt64("userId"))
 	tokenUserId := jwt.ExtractClaims(context)[IdentityKey]
 	if userId != tokenUserId {
+		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
+	}
+
+	context.Next()
+}
+
+func checkAdminPermissions(context *gin.Context) {
+	role := jwt.ExtractClaims(context)[RoleKey]
+	if RoleAdmin != role {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
 	}
 

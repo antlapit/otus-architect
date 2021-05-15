@@ -71,3 +71,14 @@ func MigrateDb(driver database.Driver, config *DatabaseConfig) {
 		log.Fatal(err)
 	}
 }
+
+type Pageable struct {
+	PageNumber uint64  `json:"pageNumber"`
+	PageSize   uint64  `json:"pageSize"`
+	Sort       []Order `json:"sort"`
+}
+
+type Order struct {
+	Property  string `json:"property"`
+	Direction string `json:"direction"`
+}

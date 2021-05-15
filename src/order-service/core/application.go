@@ -28,8 +28,14 @@ func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *Ord
 	}
 }
 
+func (c *OrderApplication) GetAllOrders(filter OrderFilter) ([]Order, error) {
+	return c.orderRepository.GetByFilter(filter)
+}
+
 func (c *OrderApplication) GetAllOrdersByUserId(userId int64) ([]Order, error) {
-	return c.orderRepository.GetByUserId(userId)
+	return c.orderRepository.GetByFilter(OrderFilter{
+		UserId: []int64{userId},
+	})
 }
 
 func (c *OrderApplication) GetOrder(userId int64, orderId int64) (Order, error) {
@@ -269,4 +275,13 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
 		log.Error(err.Error())
 		return
 	}
+}
+
+type OrderFilter struct {
+	Id        []int64    `json:"id"`
+	UserId    []int64    `json:"userId"`
+	Status    []string   `json:"status"`
+	TotalFrom *big.Float `json:"totalFrom"`
+	TotalTo   *big.Float `json:"totalTo"`
+	toolbox.Pageable
 }
