@@ -1447,135 +1447,6 @@
 							"response": []
 						},
 						{
-							"name": "Add Items 2",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});;"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"productId\": 2,\n    \"quantity\": {{$randomInt}}\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}/add-items",
-									"protocol": "http",
-									"host": [
-										"arch",
-										"homework"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"orders",
-										"{{orderId}}",
-										"add-items"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Order By Id 2",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"var maxNumberOfTries = 3;",
-											"var sleepBetweenTries = 5000;",
-											"",
-											"if (!pm.environment.get(\"collection_tries\")) {",
-											"    pm.environment.set(\"collection_tries\", 1);",
-											"}",
-											"",
-											"var jsonData = pm.response.json();",
-											"var totalAmount = parseInt(jsonData.total);",
-											"var previousAmount = pm.collectionVariables.get(\"orderAmount\");",
-											"if ((totalAmount == previousAmount) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
-											"",
-											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
-											"     pm.environment.set(\"collection_tries\", tries + 1);",
-											"     setTimeout(function() {}, sleepBetweenTries);",
-											"     postman.setNextRequest(request.name);",
-											" } else {",
-											"     pm.environment.unset(\"collection_tries\");",
-											"",
-											"    pm.test(\"Checking order\", function () {",
-											"        pm.expect(totalAmount).to.gt(previousAmount);",
-											"        pm.expect(jsonData.status).to.eql('NEW');",
-											"        pm.collectionVariables.set(\"orderAmount\", totalAmount);",
-											"    });",
-											" }",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}",
-									"protocol": "http",
-									"host": [
-										"arch",
-										"homework"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"orders",
-										"{{orderId}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
 							"name": "Confirm Order",
 							"event": [
 								{
@@ -1623,7 +1494,7 @@
 							"response": []
 						},
 						{
-							"name": "Get Order By Id 3",
+							"name": "Get Order By Id 2",
 							"event": [
 								{
 									"listen": "test",
@@ -1653,6 +1524,7 @@
 											"",
 											"    pm.test(\"Checking order\", function () {",
 											"        pm.expect(jsonData.status).to.eql('CONFIRMED');",
+											"        pm.collectionVariables.set(\"lastConfirmedOrderId\", pm.collectionVariables.get(\"orderId\"));",
 											"    });",
 											" }",
 											"",
@@ -2143,6 +2015,1205 @@
 			]
 		},
 		{
+			"name": "Order Item Changing",
+			"item": [
+				{
+					"name": "USER",
+					"item": [
+						{
+							"name": "Register Init",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var jsonData = JSON.parse(pm.request.body.raw);",
+											"pm.collectionVariables.set(\"username\", jsonData['username']);",
+											"pm.collectionVariables.set(\"password\", jsonData['password']);",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"register",
+										"init"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"     pm.test(\"Status code is 200\", function () {",
+											"        pm.response.to.have.status(200);",
+											"    });",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('token', response['token']);",
+											"}",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"if ((!jsonData.accountId) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking profile\", function () {",
+											"        pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username'));",
+											"        pm.expect(jsonData.money).to.eql(\"0\");",
+											"    });",
+											" }"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"profile"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ORDER",
+					"item": [
+						{
+							"name": "Create Order",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Orders",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"if ((jsonData.length == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(parseInt(jsonData[0].total)).to.eql(0);",
+											"        pm.expect(jsonData[0].status).to.eql('NEW');",
+											"        pm.collectionVariables.set('orderId', jsonData[0].orderId);",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Add Items 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});;"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"productId\": 1,\n    \"quantity\": {{$randomInt}}\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}/add-items",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}",
+										"add-items"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order By Id 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"var totalAmount = parseInt(jsonData.total);",
+											"if ((totalAmount == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(totalAmount).to.gt(0);",
+											"        pm.expect(jsonData.status).to.eql('NEW');",
+											"        pm.collectionVariables.set(\"orderAmount\", totalAmount);",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Add Items 2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});;"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"productId\": 2,\n    \"quantity\": {{$randomInt}}\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}/add-items",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}",
+										"add-items"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order By Id 2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"var totalAmount = parseInt(jsonData.total);",
+											"var previousAmount = pm.collectionVariables.get(\"orderAmount\");",
+											"if ((totalAmount == previousAmount) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(totalAmount).to.gt(previousAmount);",
+											"        pm.expect(jsonData.status).to.eql('NEW');",
+											"        pm.collectionVariables.set(\"orderAmount\", totalAmount);",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Items",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});;"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"productId\": 2,\n    \"quantity\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}/remove-items",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}",
+										"remove-items"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order By Id 3",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"var totalAmount = parseInt(jsonData.total);",
+											"var previousAmount = pm.collectionVariables.get(\"orderAmount\");",
+											"if ((totalAmount == previousAmount) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(totalAmount).to.lt(previousAmount);",
+											"        pm.expect(jsonData.status).to.eql('NEW');",
+											"        pm.collectionVariables.set(\"orderAmount\", totalAmount);",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Reject Order",
+			"item": [
+				{
+					"name": "USER",
+					"item": [
+						{
+							"name": "Register Init",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var jsonData = JSON.parse(pm.request.body.raw);",
+											"pm.collectionVariables.set(\"username\", jsonData['username']);",
+											"pm.collectionVariables.set(\"password\", jsonData['password']);",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"register",
+										"init"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"     pm.test(\"Status code is 200\", function () {",
+											"        pm.response.to.have.status(200);",
+											"    });",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('token', response['token']);",
+											"}",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"if ((!jsonData.accountId) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking profile\", function () {",
+											"        pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username'));",
+											"        pm.expect(jsonData.money).to.eql(\"0\");",
+											"    });",
+											" }"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"profile"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ORDER",
+					"item": [
+						{
+							"name": "Create Order",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Orders",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"if ((jsonData.length == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(parseInt(jsonData[0].total)).to.eql(0);",
+											"        pm.expect(jsonData[0].status).to.eql('NEW');",
+											"        pm.collectionVariables.set('orderId', jsonData[0].orderId);",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Reject Order",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}/reject",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}",
+										"reject"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order By Id",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"var totalAmount = parseInt(jsonData.total);",
+											"var previousAmount = pm.collectionVariables.get(\"orderAmount\");",
+											"if ((jsonData.status == 'NEW') && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking order\", function () {",
+											"        pm.expect(jsonData.status).to.eql('REJECTED');",
+											"        pm.collectionVariables.set(\"lastRejectedOrderId\", pm.collectionVariables.get(\"orderId\"));",
+											"    });",
+											" }",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/orders/{{orderId}}",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"orders",
+										"{{orderId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Notifications",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 10;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"",
+											"var jsonData = pm.response.json();",
+											"if ((jsonData.length == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking notifications\", function () {",
+											"        pm.expect(jsonData[0].orderId).to.eql(pm.collectionVariables.get('orderId'));",
+											"        pm.expect(jsonData[0].eventType).to.eql('order.rejected');",
+											"    });",
+											" }"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://arch.homework/otusapp/alapitskii/me/notifications",
+									"protocol": "http",
+									"host": [
+										"arch",
+										"homework"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"notifications"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "Admin Orders",
 			"item": [
 				{
@@ -2306,6 +3377,137 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get Completed Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.expect(jsonData[0]['orderId']).eq(pm.collectionVariables.get(\"lastConfirmedOrderId\"));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/orders?status=COMPLETED&sort=userId,DESC&paging.page=0&paging.size=1",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "COMPLETED"
+								},
+								{
+									"key": "sort",
+									"value": "userId,DESC"
+								},
+								{
+									"key": "paging.page",
+									"value": "0"
+								},
+								{
+									"key": "paging.size",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rejected Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.expect(jsonData[0]['orderId']).eq(pm.collectionVariables.get(\"lastRejectedOrderId\"));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/orders?status=REJECTED&sort=userId,desc&paging.page=0&paging.size=1",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "REJECTED"
+								},
+								{
+									"key": "sort",
+									"value": "userId,desc"
+								},
+								{
+									"key": "paging.page",
+									"value": "0"
+								},
+								{
+									"key": "paging.size",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}
@@ -2400,6 +3602,14 @@
 		},
 		{
 			"key": "billId",
+			"value": ""
+		},
+		{
+			"key": "lastRejectedOrderId",
+			"value": ""
+		},
+		{
+			"key": "lastConfirmedOrderId",
 			"value": ""
 		}
 	]

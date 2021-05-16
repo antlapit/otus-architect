@@ -19,6 +19,11 @@ type Order struct {
 	Total  *big.Float `json:"total" binding:"required"`
 }
 
+var DbFieldAdditionalMapping = map[string]string{
+	"orderId": "id",
+	"userId":  "user_id",
+}
+
 type OrderNotFoundError struct {
 	id      int64
 	orderId int64
@@ -203,8 +208,8 @@ func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	predicate := sq.And{}
-	if len(filter.Id) > 0 {
-		predicate = append(predicate, sq.Eq{"id": filter.Id})
+	if len(filter.OrderId) > 0 {
+		predicate = append(predicate, sq.Eq{"id": filter.OrderId})
 	}
 	if len(filter.UserId) > 0 {
 		predicate = append(predicate, sq.Eq{"user_id": filter.UserId})
@@ -212,17 +217,32 @@ func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
 	if len(filter.Status) > 0 {
 		predicate = append(predicate, sq.Eq{"status": filter.Status})
 	}
-	if filter.TotalFrom != nil {
+	if filter.TotalFrom != nil && filter.TotalFrom.String() != "0" {
 		predicate = append(predicate, sq.GtOrEq{"total": filter.TotalFrom.String()})
 	}
-	if filter.TotalTo != nil {
+	if filter.TotalTo != nil && filter.TotalTo.String() != "0" {
 		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
 	}
 
 	qBuilder := psql.Select("id", "user_id", "status", "total").From("orders").
 		Where(predicate)
 
-	qBuilder = qBuilder.Limit(filter.PageSize).
-		Offset(filter.PageSize * filter.PageNumber)
+	if filter.Paging != nil {
+		qBuilder = qBuilder.Limit(filter.Paging.PageSize).
+			Offset(filter.Paging.PageSize * filter.Paging.PageNumber)
+
+		if len(filter.Paging.Sort) > 0 {
+			var orderBy []string
+			for _, sort := range filter.Paging.Sort {
+				var mappedName = DbFieldAdditionalMapping[sort.Property]
+				if mappedName == "" {
+					orderBy = append(orderBy, sort.Property+" "+sort.Direction())
+				} else {
+					orderBy = append(orderBy, mappedName+" "+sort.Direction())
+				}
+			}
+			qBuilder = qBuilder.OrderBy(orderBy...)
+		}
+	}
 	return qBuilder.ToSql()
 }

@@ -278,10 +278,10 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
 }
 
 type OrderFilter struct {
-	Id        []int64    `json:"id"`
+	OrderId   []int64    `json:"id"`
 	UserId    []int64    `json:"userId"`
 	Status    []string   `json:"status"`
 	TotalFrom *big.Float `json:"totalFrom"`
 	TotalTo   *big.Float `json:"totalTo"`
-	toolbox.Pageable
+	Paging    *toolbox.Pageable
 }

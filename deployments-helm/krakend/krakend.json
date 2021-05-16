@@ -587,6 +587,9 @@
       "headers_to_pass": [
         "*"
       ],
+      "querystring_params": [
+        "*"
+      ],
       "backend": [
         {
           "host": [

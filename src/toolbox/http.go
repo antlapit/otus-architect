@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func InitGinDefault(dbConfig *DatabaseConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
@@ -127,5 +128,32 @@ func GetQueryInt64(context *gin.Context, key string) int64 {
 		return res
 	} else {
 		return 0
+	}
+}
+
+func GetPageable(context *gin.Context) *Pageable {
+	p := &Pageable{}
+	p.PageNumber = uint64(GetQueryInt64(context, "paging.page"))
+	p.PageSize = uint64(GetQueryInt64(context, "paging.size"))
+	p.Sort = GetSort(context, "sort")
+	return p
+}
+
+func GetSort(context *gin.Context, key string) []Order {
+	params, _ := context.GetQueryArray(key)
+	if len(params) > 0 {
+		var out []Order
+		for _, param := range params {
+			lex := strings.Split(param, ",")
+			if len(lex) == 2 {
+				out = append(out, Order{
+					Property:  lex[0],
+					Ascending: "DESC" != strings.ToUpper(lex[1]),
+				})
+			}
+		}
+		return out
+	} else {
+		return []Order{}
 	}
 }

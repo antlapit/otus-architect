@@ -109,16 +109,15 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	allOrdersRoute := secureGroup.Group("/orders")
 	allOrdersRoute.Use(checkAdminPermissions, errorHandler, ResponseSerializer)
 	allOrdersRoute.GET("", NewHandlerFunc(func(c *gin.Context) (interface{}, error, bool) {
-		filter := core.OrderFilter{}
+		filter := core.OrderFilter{
+			OrderId:   GetQueryInt64Array(c, "orderId"),
+			UserId:    GetQueryInt64Array(c, "userId"),
+			Status:    c.QueryArray("status"),
+			TotalFrom: GetQueryBigFloat(c, "totalFrom"),
+			TotalTo:   GetQueryBigFloat(c, "totalTo"),
+			Paging:    GetPageable(c),
+		}
 
-		filter.Id = GetQueryInt64Array(c, "id")
-		filter.UserId = GetQueryInt64Array(c, "userId")
-		filter.Status = c.QueryArray("status")
-		filter.TotalFrom = GetQueryBigFloat(c, "totalFrom")
-		filter.TotalTo = GetQueryBigFloat(c, "totalTo")
-
-		filter.Pageable.PageNumber = uint64(GetQueryInt64(c, "paging.page"))
-		filter.Pageable.PageSize = uint64(GetQueryInt64(c, "paging.size"))
 		res, err := app.GetAllOrders(filter)
 		return res, err, false
 	}))

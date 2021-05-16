@@ -80,5 +80,13 @@ type Pageable struct {
 
 type Order struct {
 	Property  string `json:"property"`
-	Direction string `json:"direction"`
+	Ascending bool   `json:"direction"`
+}
+
+func (o *Order) Direction() string {
+	if o.Ascending {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
 }
