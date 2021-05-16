@@ -15,7 +15,7 @@ Homework Otus Architect
   
 ### Ключевые решения
 - Взаимодействие сервисов выполняется через Event Store (Kafka)
-  ![События](./architecture/events.jpeg)
+  ![События](./architecture/events_new.jpeg)
 - Пользователи идентифицируются единым ИД в обоих сервисах Auth Service и User Profile Service
 - Регистрация пользователя выполняется в 2 этапа:
   - создание пользователя с логином/паролем в Auth Service
@@ -29,7 +29,7 @@ Homework Otus Architect
 ### Работа с заказом
 Сценарии работы с заказами (создание/оплата/отмена) описаны в виде Sequence диаграммы
 #### Реализованный вариант (Event Sourcing)
-![Sequence диаграмма "Event Sourcing"](./architecture/sequence_eventsourcing.jpeg)
+![Sequence диаграмма "Event Sourcing"](./architecture/sequence_eventsourcing_new.jpeg)
 #### Альтернатива (Синхронное взаимодействие сервисов)
 (!!!) Альтернативный вариант актуален для простого сценари работы с заказами (без списка позиций, доставки и т.д.) 
 ![Sequence диаграмма "Синхронное взаимодействие сервисов"](./architecture/sequence_sync.jpeg)
