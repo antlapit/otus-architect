@@ -7,7 +7,8 @@ import (
 )
 
 type UserData struct {
-	Id        int64  `json:"id"`
+	Id        int64  `json:"profileId"`
+	UserId    int64  `json:"userId"`
 	FirstName string `json:"firstName" binding:"required"`
 	LastName  string `json:"lastName" binding:"required"`
 	Email     string `json:"email" binding:"required"`
@@ -38,9 +39,9 @@ func (repository *Repository) CreateIfNotExists(userId int64) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO user_profile(id) 
+		`INSERT INTO user_profile(user_id) 
 				VALUES($1) 
-				ON CONFLICT (id) DO NOTHING`,
+				ON CONFLICT (user_id) DO NOTHING`,
 	)
 	if err != nil {
 		return false, err
@@ -59,21 +60,37 @@ func (repository *Repository) CreateIfNotExists(userId int64) (bool, error) {
 	}
 }
 
-func (repository *Repository) Get(userId int64) (UserData, error) {
+func (repository *Repository) GetByUserId(userId int64) (UserData, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, first_name, last_name, email, phone FROM user_profile WHERE id = $1")
+	stmt, err := db.Prepare("SELECT id, user_id, first_name, last_name, email, phone FROM user_profile WHERE user_id = $1")
 	if err != nil {
 		return UserData{}, err
 	}
 	defer stmt.Close()
 
 	var userData UserData
-	err = stmt.QueryRow(userId).Scan(&userData.Id, &userData.FirstName, &userData.LastName, &userData.Email, &userData.Phone)
+	var firstName sql.NullString
+	var lastName sql.NullString
+	var email sql.NullString
+	var phone sql.NullString
+	err = stmt.QueryRow(userId).Scan(&userData.Id, &userData.UserId, &firstName, &lastName, &email, &phone)
 	if err != nil {
 		// constraints
 		return UserData{}, &UserProfileNotFoundError{userId: userId}
 	}
 
+	if firstName.Valid {
+		userData.FirstName = firstName.String
+	}
+	if lastName.Valid {
+		userData.LastName = lastName.String
+	}
+	if email.Valid {
+		userData.Email = email.String
+	}
+	if phone.Valid {
+		userData.Phone = phone.String
+	}
 	return userData, nil
 }
 
@@ -81,9 +98,9 @@ func (repository *Repository) CreateOrUpdate(userId int64, userData UserData) (b
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO user_profile(id, first_name, last_name, email, phone) 
+		`INSERT INTO user_profile(user_id, first_name, last_name, email, phone) 
 				VALUES($1, $2, $3, $4, $5) 
-				ON CONFLICT (id) DO UPDATE
+				ON CONFLICT (user_id) DO UPDATE
 				SET first_name = $2, last_name = $3, email = $4, phone = $5`,
 	)
 	if err != nil {

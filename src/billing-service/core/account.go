@@ -136,30 +136,3 @@ func (repository *AccountRepository) AddMoneyById(id int64, money *big.Float) (b
 		return true, nil
 	}
 }
-
-func (repository *AccountRepository) DecreaseMoneyById(id int64, money *big.Float) (bool, error) {
-	db := repository.DB
-
-	stmt, err := db.Prepare(
-		`UPDATE account
-				SET money = money - $2
-				WHERE id = $1`,
-	)
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.Exec(id, money.String())
-	if err != nil {
-		return false, err
-	}
-	affectedRows, err := res.RowsAffected()
-	if err != nil {
-		return false, &AccountInvalidError{err.Error()}
-	} else if affectedRows == 0 {
-		return false, &AccountNotFoundError{id: id}
-	} else {
-		return true, nil
-	}
-}

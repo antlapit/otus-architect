@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: antlapit/otus-architect-notification-service
   pullPolicy: IfNotPresent
-  tag: "v2"
+  tag: "v4"
 
 nameOverride: notification-service
 fullnameOverride: "notification-service"

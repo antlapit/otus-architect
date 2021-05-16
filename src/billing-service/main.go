@@ -59,7 +59,9 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 			return nil, nil, false
 		}
 		res, err := app.SubmitMoneyAdding(userId, req)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 	billsRoute := singleUserRoute.Group("/bills")
 	billsRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
@@ -78,7 +80,9 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 	singleBillRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, billId := context.GetInt64("userId"), context.GetInt64("billId")
 		res, err := app.SubmitConfirmPaymentFromAccount(userId, billId)
-		return res, err, false
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 }
 

@@ -5,8 +5,10 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func InitGinDefault(dbConfig *DatabaseConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
@@ -93,5 +95,65 @@ func NewHandlerFunc(rp RequestProcessor) gin.HandlerFunc {
 		} else {
 			context.Set("result", res)
 		}
+	}
+}
+
+func GetQueryInt64Array(context *gin.Context, key string) []int64 {
+	params, _ := context.GetQueryArray(key)
+	if len(params) > 0 {
+		var out []int64
+		for _, param := range params {
+			parsed, err := strconv.ParseInt(param, 10, 0)
+			if err == nil {
+				out = append(out, parsed)
+			}
+		}
+		return out
+	} else {
+		return []int64{}
+	}
+}
+
+func GetQueryBigFloat(context *gin.Context, key string) *big.Float {
+	return big.NewFloat(float64(GetQueryInt64(context, key)))
+}
+
+func GetQueryInt64(context *gin.Context, key string) int64 {
+	v, b := context.GetQuery(key)
+	if b {
+		res, err := strconv.ParseInt(v, 10, 0)
+		if err != nil {
+			return 0
+		}
+		return res
+	} else {
+		return 0
+	}
+}
+
+func GetPageable(context *gin.Context) *Pageable {
+	p := &Pageable{}
+	p.PageNumber = uint64(GetQueryInt64(context, "paging.page"))
+	p.PageSize = uint64(GetQueryInt64(context, "paging.size"))
+	p.Sort = GetSort(context, "sort")
+	return p
+}
+
+func GetSort(context *gin.Context, key string) []Order {
+	params, _ := context.GetQueryArray(key)
+	if len(params) > 0 {
+		var out []Order
+		for _, param := range params {
+			lex := strings.Split(param, ",")
+			if len(lex) == 2 {
+				out = append(out, Order{
+					Property:  lex[0],
+					Ascending: "DESC" != strings.ToUpper(lex[1]),
+				})
+			}
+		}
+		return out
+	} else {
+		return []Order{}
 	}
 }

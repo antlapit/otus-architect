@@ -23,6 +23,7 @@ Homework Otus Architect
 - Изменение пароля и изменения профиля являются разными операциями и выражены разными методами в API
 - Определение ИД пользователя при роутинге запросов к сервису User Profile Service выполняется на шлюзе из JWT токена
 - Большинство обработчиков событий - идемпотентны (к примеру, обработчик событий по заказам в сервисе уведомлений проверяет, что уведомление определенного типа для заказа еще не отправлялось)
+- Цены на товары генерируются рандомом в сервисе Orders Service
 
 ## Сценарии
 ### Работа с заказом
@@ -30,18 +31,20 @@ Homework Otus Architect
 #### Реализованный вариант (Event Sourcing)
 ![Sequence диаграмма "Event Sourcing"](./architecture/sequence_eventsourcing.jpeg)
 #### Альтернатива (Синхронное взаимодействие сервисов)
+(!!!) Альтернативный вариант актуален для простого сценари работы с заказами (без списка позиций, доставки и т.д.) 
 ![Sequence диаграмма "Синхронное взаимодействие сервисов"](./architecture/sequence_sync.jpeg)
 #### Альтернатива (Transactional Outbox и асинхронные уведомления)
+(!!!) Альтернативный вариант актуален для простого сценари работы с заказами (без списка позиций, доставки и т.д.
 ![Sequence диаграмма "Transactional Outbox и асинхронные уведомления"](./architecture/sequence_notification.jpeg)
 
 
 ## Сборка
 * `cd src`
-* `docker build -t antlapit/otus-architect-auth-service:v2 -f Dockerfile.auth .`
-* `docker build -t antlapit/otus-architect-user-profile-service:v2 -f Dockerfile.users .`
-* `docker build -t antlapit/otus-architect-order-service:v3 -f Dockerfile.order .`
-* `docker build -t antlapit/otus-architect-billing-service:v2 -f Dockerfile.billing .`
-* `docker build -t antlapit/otus-architect-notification-service:v2 -f Dockerfile.notification .`
+* `docker build -t antlapit/otus-architect-auth-service:v4 -f Dockerfile.auth .`
+* `docker build -t antlapit/otus-architect-user-profile-service:v4 -f Dockerfile.users .`
+* `docker build -t antlapit/otus-architect-order-service:v4 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-billing-service:v4 -f Dockerfile.billing .`
+* `docker build -t antlapit/otus-architect-notification-service:v4 -f Dockerfile.notification .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -137,25 +140,42 @@ Homework Otus Architect
   - Регистрация пользователя 2
   - Логин пользователя 2
   - Проверка профиля пользователя 2
-- `Simple Order`:
+- `Full Order Scenario`:
   - Регистрация пользователя
   - Логин пользователя
   - Получение профиля
+  - Создание заказа
+  - Добавление позиции в заказ
+  - Подтверждение оплаты (денег хватает)
   - Добавление денег на счет
   - Проверка денег на счету
-  - Создание заказа
-  - Подтверждение оплаты (денег хватает)
   - Проверка остатка на счету
   - Проверка отправленного уведомления
-- `Simple Order Not Enough Money`:
+- `Order Item Changing`:
   - Регистрация пользователя
   - Логин пользователя
   - Получение профиля
   - Создание заказа
-  - Подтверждение оплаты (денег не хватает)
-  - Проверка остатка на счету
+  - Добавление позиции в заказ
+  - Добавление второй позиции в заказ
+  - Частичное удаление второй позиции из заказа
+  - Проверка общей стоиммости заказа
+- `Reject Order`:
+  - Регистрация пользователя
+  - Логин пользователя
+  - Получение профиля
+  - Создание заказа
+  - Отмена заказа
+  - Проверка отправленного уведомления
+- `Admin Orders`:
+  - Регистрация администратора
+  - Логин администратора
+  - Попытка получить профиль (доступа нет)
+  - Получение последнего подтвержденного заказа
+  - Получение последнего отмененного заказа
 
-## Стресс-тестирование
+## Deprecated
+### Стресс-тестирование
 * одновременный запуск скриптов `scripts/load_get.sh` и `scripts/load_delete.sh`
 * для проверки 5хх ошибок во время тестирования имитировал "падение" БД
 

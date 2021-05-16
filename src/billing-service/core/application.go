@@ -41,11 +41,8 @@ func (c *BillingApplication) ProcessEvent(id string, eventType string, data inte
 	case event.PaymentCompleted:
 		c.completePayment(data.(event.PaymentCompleted))
 		break
-	case event.OrderCreated:
-		c.createBillForOrder(data.(event.OrderCreated))
-		break
-	case event.OrderRejected:
-		c.rejectPayment(data.(event.OrderRejected))
+	case event.OrderConfirmed:
+		c.createBillForOrder(data.(event.OrderConfirmed))
 		break
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
@@ -69,7 +66,7 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 	if bill.Status != "CREATED" {
 		return
 	}
-	res, err := c.accountRepository.DecreaseMoneyById(data.AccountId, bill.Total)
+	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(bill.Total))
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -111,24 +108,6 @@ func (c *BillingApplication) completePayment(data event.PaymentCompleted) {
 	}
 	if !res {
 		log.Error("Cannot complete payment")
-	}
-}
-
-func (c *BillingApplication) rejectPayment(data event.OrderRejected) {
-	bill, err := c.billRepository.GetByOrderId(data.OrderId)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if bill.Status != "NEW" {
-		return
-	}
-	res, err := c.billRepository.Reject(bill.Id)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	if !res {
-		log.Error("Cannot reject payment")
 	}
 }
 
@@ -186,13 +165,13 @@ func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billI
 	}
 }
 
-func (c *BillingApplication) createBillForOrder(data event.OrderCreated) {
+func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
 	account, err := c.accountRepository.GetByUserId(data.UserId)
 	if err != nil {
 		log.Error("Error creating order")
 		return
 	}
-	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Amount)
+	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Total)
 	if err != nil {
 		log.Error(err.Error())
 	}

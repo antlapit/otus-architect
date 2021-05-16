@@ -10,6 +10,7 @@ type UserData struct {
 	Id       int64
 	Username string `binding:"required"`
 	Password string `binding:"required"`
+	Role     string `binding:"required"`
 }
 
 type Repository struct {
@@ -43,17 +44,17 @@ func (error *UserInvalidError) Error() string {
 func (repository *Repository) CreateOrUpdate(userData UserData) (bool, error) {
 	db := repository.DB
 	stmt, err := db.Prepare(
-		`INSERT INTO users(id, username, password) 
-				VALUES($1, $2, $3)
+		`INSERT INTO users(id, username, password, role) 
+				VALUES($1, $2, $3, $4)
 				ON CONFLICT (id) DO UPDATE
-				SET username = $2, password = $3`,
+				SET username = $2, password = $3, role = $4`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(userData.Id, userData.Username, userData.Password)
+	res, err := stmt.Exec(userData.Id, userData.Username, userData.Password, userData.Role)
 	affectedRows, err := res.RowsAffected()
 	if err != nil {
 		return false, &UserInvalidError{err.Error()}
@@ -89,14 +90,14 @@ func (repository *Repository) UpdatePassword(userId int64, password string) (boo
 
 func (repository *Repository) GetByUsername(userName string) (UserData, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, username, password FROM users WHERE username = $1")
+	stmt, err := db.Prepare("SELECT id, username, password, role FROM users WHERE username = $1")
 	if err != nil {
 		return UserData{}, err
 	}
 	defer stmt.Close()
 
 	var userData UserData
-	err = stmt.QueryRow(userName).Scan(&userData.Id, &userData.Username, &userData.Password)
+	err = stmt.QueryRow(userName).Scan(&userData.Id, &userData.Username, &userData.Password, &userData.Role)
 	if err != nil {
 		// constraints
 		return UserData{}, &UserNotFoundError{userName: userName}

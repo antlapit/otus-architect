@@ -22,8 +22,8 @@ func NewNotificationApplication(db *sql.DB) *NotificationApplication {
 func (app *NotificationApplication) ProcessEvent(id string, eventType string, data interface{}) {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
-	case event.OrderCreated:
-		castedData := data.(event.OrderCreated)
+	case event.OrderConfirmed:
+		castedData := data.(event.OrderConfirmed)
 		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
 		if err != nil {
 			log.Error(err.Error())

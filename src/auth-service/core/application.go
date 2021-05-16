@@ -28,6 +28,9 @@ func (app *AuthApplication) ProcessEvent(id string, eventType string, data inter
 	case event.UserCreated:
 		app.createUser(data.(event.UserCreated))
 		break
+	case event.AdminCreated:
+		app.createAdmin(data.(event.AdminCreated))
+		break
 	case event.UserChangePassword:
 		app.changePassword(data.(event.UserChangePassword))
 		break
@@ -41,6 +44,21 @@ func (app *AuthApplication) createUser(user event.UserCreated) {
 		Id:       user.UserId,
 		Username: user.Username,
 		Password: user.Password,
+		Role:     RoleUser,
+	})
+	if err != nil {
+		fmt.Printf("Error creating user %s", user.Username)
+	} else {
+		fmt.Printf("User %s successfully created", user.Username)
+	}
+}
+
+func (app *AuthApplication) createAdmin(user event.AdminCreated) {
+	_, err := app.repository.CreateOrUpdate(UserData{
+		Id:       user.UserId,
+		Username: user.Username,
+		Password: user.Password,
+		Role:     RoleAdmin,
 	})
 	if err != nil {
 		fmt.Printf("Error creating user %s", user.Username)
@@ -64,7 +82,7 @@ func (app *AuthApplication) GetByUsername(userName string) (UserData, error) {
 	return app.repository.GetByUsername(userName)
 }
 
-func (app *AuthApplication) SubmitUserCreationEvent(username string, password string) (string, error) {
+func (app *AuthApplication) SubmitUserCreationEvent(username string, password string, isAdmin bool) (string, error) {
 	ud, _ := app.repository.GetByUsername(username)
 	if (ud != UserData{}) {
 		return "", nil
@@ -81,11 +99,19 @@ func (app *AuthApplication) SubmitUserCreationEvent(username string, password st
 		return "", err
 	}
 
-	return app.writer.WriteEvent(event.EVENT_USER_CREATED, event.UserCreated{
-		UserId:   userId,
-		Username: username,
-		Password: string(pass),
-	})
+	if isAdmin {
+		return app.writer.WriteEvent(event.EVENT_ADMIN_CREATED, event.AdminCreated{
+			UserId:   userId,
+			Username: username,
+			Password: string(pass),
+		})
+	} else {
+		return app.writer.WriteEvent(event.EVENT_USER_CREATED, event.UserCreated{
+			UserId:   userId,
+			Username: username,
+			Password: string(pass),
+		})
+	}
 }
 
 func (app *AuthApplication) SubmitChangePasswordEvent(userName string, oldPassword string, newPassword string) (string, error) {

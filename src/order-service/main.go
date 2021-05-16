@@ -43,38 +43,82 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	secureGroup.Use(errorHandler)
 
-	ordersRoute := secureGroup.Group("/users/:id/orders")
-	ordersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	userOrdersRoute := secureGroup.Group("/users/:id/orders")
+	userOrdersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
 
-	ordersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	userOrdersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 
 		res, err := app.GetAllOrdersByUserId(userId)
 		return res, err, false
 	}))
-	ordersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	userOrdersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
-
-		var req core.CreateOrderRequest
-		if err := context.ShouldBindJSON(&req); err != nil {
-			AbortErrorResponse(context, http.StatusBadRequest, err, "DA02")
-			return nil, nil, false
-		}
-
-		res, err := app.SubmitOrderCreation(userId, req)
-		return res, err, false
+		res, err := app.SubmitOrderCreation(userId)
+		return gin.H{
+			"eventId": res,
+		}, err, false
 	}))
 
-	singleOrderRoute := ordersRoute.Group("/:orderId")
-	singleOrderRoute.Use(orderIdIdExtractor)
-	singleOrderRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute := userOrdersRoute.Group("/:orderId")
+	singleUserOrderRoute.Use(orderIdIdExtractor)
+	singleUserOrderRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.GetOrder(userId, orderId)
 		return res, err, false
 	}))
-	singleOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleUserOrderRoute.POST("/reject", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.SubmitOrderReject(userId, orderId)
+		return gin.H{
+			"eventId": res,
+		}, err, false
+	}))
+	singleUserOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		res, err := app.SubmitOrderConfirm(userId, orderId)
+		return gin.H{
+			"eventId": res,
+		}, err, false
+	}))
+	singleUserOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		var c orderChange
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+		res, err := app.SubmitOrderAddItem(userId, orderId, c.ProductId, c.Quantity)
+		return gin.H{
+			"eventId": res,
+		}, err, false
+	}))
+	singleUserOrderRoute.POST("/remove-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		var c orderChange
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+		res, err := app.SubmitOrderRemoveItem(userId, orderId, c.ProductId, c.Quantity)
+		return gin.H{
+			"eventId": res,
+		}, err, false
+	}))
+
+	allOrdersRoute := secureGroup.Group("/orders")
+	allOrdersRoute.Use(checkAdminPermissions, errorHandler, ResponseSerializer)
+	allOrdersRoute.GET("", NewHandlerFunc(func(c *gin.Context) (interface{}, error, bool) {
+		filter := core.OrderFilter{
+			OrderId:   GetQueryInt64Array(c, "orderId"),
+			UserId:    GetQueryInt64Array(c, "userId"),
+			Status:    c.QueryArray("status"),
+			TotalFrom: GetQueryBigFloat(c, "totalFrom"),
+			TotalTo:   GetQueryBigFloat(c, "totalTo"),
+			Paging:    GetPageable(c),
+		}
+
+		res, err := app.GetAllOrders(filter)
 		return res, err, false
 	}))
 }
@@ -106,6 +150,15 @@ func checkUserPermissions(context *gin.Context) {
 	context.Next()
 }
 
+func checkAdminPermissions(context *gin.Context) {
+	role := jwt.ExtractClaims(context)[RoleKey]
+	if RoleAdmin != role {
+		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
+	}
+
+	context.Next()
+}
+
 // Извлечение ИД пользователя из URL
 func userIdExtractor(context *gin.Context) {
 	id, err := GetPathInt64(context, "id")
@@ -126,4 +179,9 @@ func orderIdIdExtractor(context *gin.Context) {
 	context.Set("orderId", id)
 
 	context.Next()
+}
+
+type orderChange struct {
+	ProductId int64 `json:"productId" binding:"required"`
+	Quantity  int64 `json:"quantity" binding:"required"`
 }

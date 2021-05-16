@@ -32,11 +32,18 @@ type AuthConfig struct {
 type AuthData struct {
 	Id       int64
 	UserName string
+	Role     string
 }
 
 const (
 	IdentityKey string = "auth_id"
 	UserNameKey string = "auth_username"
+	RoleKey     string = "auth_role"
+)
+
+const (
+	RoleAdmin string = "ADMIN"
+	RoleUser  string = "USER"
 )
 
 func LoadAuthConfig() *AuthConfig {
@@ -130,6 +137,7 @@ func InitAuthMiddleware(config *AuthConfig) *jwt.GinJWTMiddleware {
 			return &AuthData{
 				Id:       int64(claims[IdentityKey].(float64)),
 				UserName: claims[UserNameKey].(string),
+				Role:     claims[RoleKey].(string),
 			}
 		},
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
@@ -137,6 +145,7 @@ func InitAuthMiddleware(config *AuthConfig) *jwt.GinJWTMiddleware {
 				return jwt.MapClaims{
 					IdentityKey: v.Id,
 					UserNameKey: v.UserName,
+					RoleKey:     v.Role,
 					"sub":       strconv.FormatInt(v.Id, 10),
 					"aud":       config.tokenAudience,
 					"iss":       config.tokenIssuer,
