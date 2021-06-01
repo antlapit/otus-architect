@@ -28,12 +28,25 @@ func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *Ord
 	}
 }
 
-func (c *OrderApplication) GetAllOrders(filter OrderFilter) ([]Order, error) {
-	return c.orderRepository.GetByFilter(filter)
+func (c *OrderApplication) GetAllOrders(filter *OrderFilter) (OrderPage, error) {
+	count, err := c.orderRepository.CountByFilter(filter)
+	if err != nil {
+		return OrderPage{}, err
+	}
+
+	items, err := c.orderRepository.GetByFilter(filter)
+	return OrderPage{
+		Items: items,
+		Page: &toolbox.Page{
+			PageNumber: filter.Paging.PageNumber,
+			PageSize:   filter.Paging.PageSize,
+			Count:      count,
+		},
+	}, nil
 }
 
 func (c *OrderApplication) GetAllOrdersByUserId(userId int64) ([]Order, error) {
-	return c.orderRepository.GetByFilter(OrderFilter{
+	return c.orderRepository.GetByFilter(&OrderFilter{
 		UserId: []int64{userId},
 	})
 }
@@ -284,4 +297,9 @@ type OrderFilter struct {
 	TotalFrom *big.Float `json:"totalFrom"`
 	TotalTo   *big.Float `json:"totalTo"`
 	Paging    *toolbox.Pageable
+}
+
+type OrderPage struct {
+	Page  *toolbox.Page `json:"page"`
+	Items []Order       `json:"items"`
 }

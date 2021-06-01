@@ -13,4 +13,5 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/segmentio/kafka-go v0.4.12
+	github.com/Masterminds/squirrel v1.5.0
 )

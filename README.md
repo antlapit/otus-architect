@@ -7,10 +7,12 @@ Homework Otus Architect
 - NGINX Ingress - используется как точка входа для всех API. Настроен на Host - arch.homework и префиксы для всех урлов /otusapp/alapitskii
 - KrakenD - используется в качестве шлюза запросов. Задачи - переадресация запросов на соответствующие Backend сервисы, первичная валидация JWT токена, объединение ответов от Backend сервисов для отображения в API
 - Auth Service - сервис для работы с аутентификационными данными пользователей. Предоставляет API аутентификации и управления логином/паролем пользователя
-- User Profile Service - сервис для работы с контактными данными пользователей. Предоставляет API получения/изменения контактных данных пользвоателя.
-- Billing Service - сервис для работы со счетами на оплату
-- Orders Service - сервис для работы с заказами
-- Notification Service - сервис для уведомлений клиента
+- User Profile Service - сервис для работы с контактными данными пользователей. Предоставляет API получения/изменения контактных данных пользователя.
+- Billing Service - сервис для работы со счетами на оплату. Позволяет оплачивать подтвержденные пользователем заказы
+- Orders Service - сервис для работы с заказами. Позволяет изменять список товаров в заказе, управляет статусом заказа и составными частями заказа в других сервисах (доставка, резервирование)
+- Product Service - сервис с товарами. Предназначен для получения описаний товаров и поиска
+- Price Service - сервис цен за товары. Предназначен для работы с ценами за товары с учетом разного количество товарных позиций
+- Notification Service - сервис уведомлений клиента. Формирует сообщения в ответ на события в других сервисах
 ![Компоненты](./architecture/components.jpeg)
   
 ### Ключевые решения
@@ -45,6 +47,8 @@ Homework Otus Architect
 * `docker build -t antlapit/otus-architect-order-service:v4 -f Dockerfile.order .`
 * `docker build -t antlapit/otus-architect-billing-service:v4 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v4 -f Dockerfile.notification .`
+* `docker build -t antlapit/otus-architect-price-service:v1 -f Dockerfile.price .`
+* `docker build -t antlapit/otus-architect-product-service:v1 -f Dockerfile.product .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -69,6 +73,8 @@ Homework Otus Architect
 * **Сервис заказов** `helm install order-service-release deployments-helm/order-service`
 * **Сервис счетов** `helm install billing-service-release deployments-helm/billing-service`
 * **Сервис уведомлений** `helm install notification-service-release deployments-helm/notification-service`
+* **Сервис товаров** `helm install product-service-release deployments-helm/product-service`
+* **Сервис цен** `helm install price-service-release deployments-helm/price-service`
 * **Шлюз KrakenD** `helm install krakend deployments-helm/krakend`
 
 **Состав релиза**  
@@ -86,7 +92,9 @@ Homework Otus Architect
   * для БД аутентификации/авторизации `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-auth.yaml`
   * для БД заказов `helm install postgres-exporter-order prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-order.yaml`
   * для БД счетов `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml`
-  * для БД уведомлений `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml`
+  * для БД уведомлений `helm install postgres-exporter-notification prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml`
+  * для БД товаров `helm install postgres-exporter-price prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-price.yaml`
+  * для БД цен `helm install postgres-exporter-product prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`

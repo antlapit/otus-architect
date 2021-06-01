@@ -8,6 +8,8 @@ helm install auth-service-release deployments-helm/auth-service
 helm install order-service-release deployments-helm/order-service
 helm install billing-service-release deployments-helm/billing-service
 helm install notification-service-release deployments-helm/notification-service
+helm install product-service-release deployments-helm/product-service
+helm install prices-service-release deployments-helm/price-service
 helm install krakend deployments-helm/krakend
 
 helm install prom prometheus-community/kube-prometheus-stack -f deployments/prometheus.yaml --atomic
@@ -16,3 +18,5 @@ helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exp
 helm install postgres-exporter-order prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-order.yaml
 helm install postgres-exporter-billing prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml
 helm install postgres-exporter-notification prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml
+helm install postgres-exporter-price prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-price.yaml
+helm install postgres-exporter-product prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product.yaml

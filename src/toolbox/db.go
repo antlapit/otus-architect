@@ -3,6 +3,7 @@ package toolbox
 import (
 	"database/sql"
 	"fmt"
+	sq "github.com/Masterminds/squirrel"
 	. "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -80,7 +81,13 @@ type Pageable struct {
 
 type Order struct {
 	Property  string `json:"property"`
-	Ascending bool   `json:"direction"`
+	Ascending bool   `json:"ascending"`
+}
+
+type Page struct {
+	PageNumber uint64 `json:"pageNumber"`
+	PageSize   uint64 `json:"pageSize"`
+	Count      uint64 `json:"count"`
 }
 
 func (o *Order) Direction() string {
@@ -89,4 +96,26 @@ func (o *Order) Direction() string {
 	} else {
 		return "DESC"
 	}
+}
+
+func AddPaging(qBuilder sq.SelectBuilder, pageable *Pageable, mapping map[string]string) sq.SelectBuilder {
+	var out = qBuilder
+	if pageable != nil {
+		out = out.Limit(pageable.PageSize).
+			Offset(pageable.PageSize * pageable.PageNumber)
+
+		if len(pageable.Sort) > 0 {
+			var orderBy []string
+			for _, sort := range pageable.Sort {
+				var mappedName = mapping[sort.Property]
+				if mappedName == "" {
+					orderBy = append(orderBy, sort.Property+" "+sort.Direction())
+				} else {
+					orderBy = append(orderBy, mappedName+" "+sort.Direction())
+				}
+			}
+			out = out.OrderBy(orderBy...)
+		}
+	}
+	return out
 }

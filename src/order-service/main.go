@@ -108,17 +108,14 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 
 	allOrdersRoute := secureGroup.Group("/orders")
 	allOrdersRoute.Use(checkAdminPermissions, errorHandler, ResponseSerializer)
-	allOrdersRoute.GET("", NewHandlerFunc(func(c *gin.Context) (interface{}, error, bool) {
-		filter := core.OrderFilter{
-			OrderId:   GetQueryInt64Array(c, "orderId"),
-			UserId:    GetQueryInt64Array(c, "userId"),
-			Status:    c.QueryArray("status"),
-			TotalFrom: GetQueryBigFloat(c, "totalFrom"),
-			TotalTo:   GetQueryBigFloat(c, "totalTo"),
-			Paging:    GetPageable(c),
+	allOrdersRoute.POST("/find-by-filter", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		var filters core.OrderFilter
+		if err := context.ShouldBindJSON(&filters); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
 		}
 
-		res, err := app.GetAllOrders(filter)
+		res, err := app.GetAllOrders(&filters)
 		return res, err, false
 	}))
 }

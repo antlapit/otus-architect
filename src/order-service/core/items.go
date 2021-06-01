@@ -1,9 +1,49 @@
 package core
 
-import "database/sql"
+import (
+	"database/sql"
+	"math/big"
+)
 
 type ItemRepository struct {
 	DB *sql.DB
+}
+
+type OrderItem struct {
+	Id        int64      `json:"itemId"  binding:"required"`
+	OrderId   int64      `json:"orderId" binding:"required"`
+	ProductId int64      `json:"productId" binding:"required"`
+	Quantity  int64      `json:"quantity" binding:"required"`
+	Total     *big.Float `json:"total" binding:"required"`
+}
+
+func (repository *ItemRepository) GetItems(orderId int64) ([]OrderItem, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare("SELECT id, order_id, product_id, quantity, total FROM items WHERE order_id = $1")
+	if err != nil {
+		return []OrderItem{}, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(orderId)
+	if err != nil {
+		// constraints
+		return []OrderItem{}, err
+	} else {
+		var result = make([]OrderItem, 0)
+		for rows.Next() {
+			var order OrderItem
+			var totalVal sql.NullFloat64
+			err = rows.Scan(&order.Id, &order.OrderId, &order.ProductId, &order.Quantity, &totalVal)
+			if err != nil {
+				return []OrderItem{}, err
+			}
+			order.Total = big.NewFloat(totalVal.Float64)
+			result = append(result, order)
+		}
+		return result, nil
+	}
 }
 
 func (repository *ItemRepository) AddItems(orderId int64, productId int64, quantity int64) (bool, error) {

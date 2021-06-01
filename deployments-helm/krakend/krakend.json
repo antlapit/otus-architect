@@ -582,7 +582,7 @@
     },
     {
       "endpoint": "/admin/orders",
-      "method": "GET",
+      "method": "POST",
       "output_encoding": "no-op",
       "headers_to_pass": [
         "*"
@@ -596,7 +596,7 @@
             "http://order-service:8003"
           ],
           "encoding": "no-op",
-          "url_pattern": "/orders"
+          "url_pattern": "/orders/find-by-filter"
         }
       ],
       "extra_config": {

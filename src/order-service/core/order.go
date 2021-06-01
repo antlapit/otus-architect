@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/antlapit/otus-architect/toolbox"
 	"math/big"
 	"strconv"
 )
@@ -57,7 +58,9 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 
 	stmt, err := db.Prepare(
 		`INSERT INTO orders(id, user_id, status, total) 
-				VALUES($1, $2, $3, $4)`,
+				VALUES($1, $2, $3, $4)
+				ON CONFLICT (id) DO UPDATE
+				SET user_id = $2, status = $3, total = $4`,
 	)
 	if err != nil {
 		return false, err
@@ -96,10 +99,12 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	return order, nil
 }
 
-func (repository *OrderRepository) GetByFilter(filter OrderFilter) ([]Order, error) {
+func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, error) {
 	db := repository.DB
 
-	query, values, err := prepareQuery(filter)
+	queryBuilder := prepareQuery([]string{"id", "user_id", "status", "total"}, filter)
+	queryBuilder = toolbox.AddPaging(queryBuilder, filter.Paging, DbFieldAdditionalMapping)
+	query, values, err := queryBuilder.ToSql()
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -204,7 +209,28 @@ func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) 
 	}
 }
 
-func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
+func (repository *OrderRepository) CountByFilter(filter *OrderFilter) (uint64, error) {
+	db := repository.DB
+
+	queryBuilder := prepareQuery([]string{"count(1)"}, filter)
+	query, values, err := queryBuilder.ToSql()
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var count uint64
+	err = stmt.QueryRow(values...).Scan(&count)
+	if err != nil {
+		return 0, err
+	} else {
+		return count, nil
+	}
+}
+
+func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	predicate := sq.And{}
@@ -224,25 +250,8 @@ func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
 		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
 	}
 
-	qBuilder := psql.Select("id", "user_id", "status", "total").From("orders").
+	qBuilder := psql.Select(columns...).From("orders").
 		Where(predicate)
 
-	if filter.Paging != nil {
-		qBuilder = qBuilder.Limit(filter.Paging.PageSize).
-			Offset(filter.Paging.PageSize * filter.Paging.PageNumber)
-
-		if len(filter.Paging.Sort) > 0 {
-			var orderBy []string
-			for _, sort := range filter.Paging.Sort {
-				var mappedName = DbFieldAdditionalMapping[sort.Property]
-				if mappedName == "" {
-					orderBy = append(orderBy, sort.Property+" "+sort.Direction())
-				} else {
-					orderBy = append(orderBy, mappedName+" "+sort.Direction())
-				}
-			}
-			qBuilder = qBuilder.OrderBy(orderBy...)
-		}
-	}
-	return qBuilder.ToSql()
+	return qBuilder
 }
