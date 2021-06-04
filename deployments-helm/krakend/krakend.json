@@ -613,6 +613,66 @@
           "roles_key": "auth_role"
         }
       }
+    },
+    {
+      "endpoint": "/categories",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/categories"
+        }
+      ]
+    },
+    {
+      "endpoint": "/products/{productId}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/products/{productId}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/prices/by-product-id/{productId}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://price-service:8006"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/prices/by-product-id/{productId}"
+        }
+      ]
     }
   ]
 }
