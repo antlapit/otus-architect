@@ -18,7 +18,7 @@ func main() {
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
 		kafka := InitKafkaDefault()
 
@@ -43,8 +43,8 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Bi
 }
 
 func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) {
-	singleUserRoute := secureGroup.Group("/accounts/by-user-id/:id")
-	singleUserRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	singleUserRoute := secureGroup.Group("/accounts/by-user-id/:userId")
+	singleUserRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
 	singleUserRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 		res, err := app.GetAccount(userId)
@@ -71,7 +71,7 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 		return res, err, false
 	}))
 	singleBillRoute := billsRoute.Group("/:billId")
-	singleBillRoute.Use(billIdExtractor)
+	singleBillRoute.Use(GenericIdExtractor("billId"))
 	singleBillRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, billId := context.GetInt64("userId"), context.GetInt64("billId")
 		res, err := app.GetBill(userId, billId)
@@ -92,28 +92,6 @@ func checkUserPermissions(context *gin.Context) {
 	if userId != tokenUserId {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
 	}
-
-	context.Next()
-}
-
-// Извлечение ИД пользователя из URL
-func userIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "id")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("userId", id)
-
-	context.Next()
-}
-
-// Извлечение ИД счета на оплату
-func billIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "billId")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("billId", id)
 
 	context.Next()
 }

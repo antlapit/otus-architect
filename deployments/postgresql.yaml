@@ -34,10 +34,6 @@ initdbScripts:
     ALTER USER users WITH PASSWORD '_ky62W9An32QMXPZ';
     CREATE DATABASE users WITH OWNER users;
 
-    CREATE USER products;
-    ALTER USER products WITH PASSWORD 'qwJHMsPkVWx4SFqm';
-    CREATE DATABASE products WITH OWNER products;
-
-    CREATE USER prices;
-    ALTER USER prices WITH PASSWORD 'uF9jhWwuFNSms7KV';
-    CREATE DATABASE prices WITH OWNER prices;
+    CREATE USER productsearch;
+    ALTER USER productsearch WITH PASSWORD 'qwJHMsPkVWx4SFqm';
+    CREATE DATABASE productsearch WITH OWNER productsearch;

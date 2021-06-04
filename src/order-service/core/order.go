@@ -7,6 +7,7 @@ import (
 	"github.com/antlapit/otus-architect/toolbox"
 	"math/big"
 	"strconv"
+	"time"
 )
 
 type OrderRepository struct {
@@ -18,6 +19,7 @@ type Order struct {
 	UserId int64      `json:"userId" binding:"required"`
 	Status string     `json:"status" binding:"required"`
 	Total  *big.Float `json:"total" binding:"required"`
+	Date   *time.Time `json:"date" binding:"required"`
 }
 
 var DbFieldAdditionalMapping = map[string]string{
@@ -57,8 +59,8 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO orders(id, user_id, status, total) 
-				VALUES($1, $2, $3, $4)
+		`INSERT INTO orders(id, user_id, status, total, date) 
+				VALUES($1, $2, $3, $4, $5)
 				ON CONFLICT (id) DO UPDATE
 				SET user_id = $2, status = $3, total = $4`,
 	)
@@ -67,7 +69,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, userId, StatusNew, total.String())
+	res, err := stmt.Exec(orderId, userId, StatusNew, total.String(), time.Now())
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +91,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 
 	var order Order
 	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
+	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
 	order.Total = big.NewFloat(totalVal.Float64)
 	if err != nil {
 		// constraints
@@ -102,7 +104,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, error) {
 	db := repository.DB
 
-	queryBuilder := prepareQuery([]string{"id", "user_id", "status", "total"}, filter)
+	queryBuilder := prepareQuery([]string{"id", "user_id", "status", "total", "date"}, filter)
 	queryBuilder = toolbox.AddPaging(queryBuilder, filter.Paging, DbFieldAdditionalMapping)
 	query, values, err := queryBuilder.ToSql()
 
@@ -121,7 +123,7 @@ func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, er
 		for rows.Next() {
 			var order Order
 			var totalVal sql.NullFloat64
-			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
+			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
 			if err != nil {
 				return []Order{}, err
 			}

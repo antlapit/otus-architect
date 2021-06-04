@@ -25,34 +25,34 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-        - name: price-service-post-install-job
+        - name: product-search-service-post-install-job
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: price-secret
+                  name: product-search-secret
                   key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: price-secret
+                  name: product-search-secret
                   key: DB_PASSWORD
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: price-config
+                  name: product-search-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: price-config
+                  name: product-search-config
                   key: DB_PORT
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: price-config
+                  name: product-search-config
                   key: DB_NAME
             - name: SERVICE_MODE
               value: INIT

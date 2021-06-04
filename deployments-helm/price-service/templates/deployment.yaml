@@ -28,31 +28,31 @@ spec:
               containerPort: {{ $svcPort }}
               protocol: TCP
           env:
-            - name: DB_USER
+            - name: MONGO_USER
               valueFrom:
                 secretKeyRef:
                   name: price-secret
-                  key: DB_USER
-            - name: DB_PASSWORD
+                  key: MONGO_USER
+            - name: MONGO_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: price-secret
-                  key: DB_PASSWORD
-            - name: DB_HOST
+                  key: MONGO_PASSWORD
+            - name: MONGO_HOST
               valueFrom:
                 configMapKeyRef:
                   name: price-config
-                  key: DB_HOST
-            - name: DB_PORT
+                  key: MONGO_HOST
+            - name: MONGO_PORT
               valueFrom:
                 configMapKeyRef:
                   name: price-config
-                  key: DB_PORT
-            - name: DB_NAME
+                  key: MONGO_PORT
+            - name: MONGO_NAME
               valueFrom:
                 configMapKeyRef:
                   name: price-config
-                  key: DB_NAME
+                  key: MONGO_NAME
             - name: AUTH_REALM
               valueFrom:
                 configMapKeyRef:

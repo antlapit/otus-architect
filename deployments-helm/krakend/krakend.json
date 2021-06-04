@@ -581,7 +581,7 @@
       ]
     },
     {
-      "endpoint": "/admin/orders",
+      "endpoint": "/admin/orders/find-by-filter",
       "method": "POST",
       "output_encoding": "no-op",
       "headers_to_pass": [

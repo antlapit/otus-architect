@@ -4,31 +4,27 @@ import (
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/product-service/core"
 	. "github.com/antlapit/otus-architect/toolbox"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"net/http"
-	"os"
 )
 
 func main() {
-	serviceMode := os.Getenv("SERVICE_MODE")
-	db, driver, dbConfig := InitDefaultDatabase()
+	mongo := InitDefaultMongo()
+	defer mongo.Disconnect()
 
-	if serviceMode == "INIT" {
-		MigrateDb(driver, dbConfig)
-	} else {
-		engine, _, secureGroup, publicGroup := InitGinDefault(dbConfig)
+	engine, _, secureGroup, publicGroup := InitGinDefault(nil, mongo.Config)
 
-		kafka := InitKafkaDefault()
+	kafka := InitKafkaDefault()
 
-		eventsMarshaller := NewEventMarshaller(event.AllEvents)
+	eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var productEventWriter = kafka.StartNewWriter(event.TOPIC_PRODUCTS, eventsMarshaller)
-		var app = core.NewProductApplication(db, productEventWriter)
-		initListeners(kafka, eventsMarshaller, app)
-		initApi(publicGroup, secureGroup, app)
-		engine.Run(":8005")
-	}
+	var productEventWriter = kafka.StartNewWriter(event.TOPIC_PRODUCTS, eventsMarshaller)
+	var app = core.NewProductApplication(mongo, productEventWriter)
+	initListeners(kafka, eventsMarshaller, app)
+	initApi(publicGroup, secureGroup, app)
+	engine.Run(":8005")
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.ProductApplication) {
@@ -40,32 +36,52 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Pr
 
 func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *core.ProductApplication) {
 	publicGroup.Use(errorHandler)
-	productsRoute := publicGroup.Group("/products")
-	productsRoute.Use(ResponseSerializer)
 
-	productsRoute.POST("/find-by-filter", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
-		var filters core.ProductFilters
-		if err := context.ShouldBindJSON(&filters); err != nil {
+	initPublicCategories(publicGroup, app)
+	initPublicProducts(publicGroup, app)
+
+	secureGroup.Use(errorHandler)
+	manageGroup := secureGroup.Group("/manage")
+	manageGroup.Use(checkAdminPermissions, ResponseSerializer)
+
+	initPrivateCategories(manageGroup, app)
+	initPrivateProducts(manageGroup, app)
+}
+
+func initPrivateCategories(group *gin.RouterGroup, app *core.ProductApplication) {
+	manageProductsRoute := group.Group("/categories")
+	manageProductsRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		var c core.CategoryData
+		if err := context.ShouldBindJSON(&c); err != nil {
 			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
 			return nil, nil, true
 		}
 
-		res, err := app.GetAllProducts(&filters)
-		return res, err, false
+		categoryId, err := app.CreateCategory(c.Name)
+		return gin.H{
+			"categoryId": categoryId,
+		}, err, false
 	}))
 
-	singleProductRoute := productsRoute.Group("/:productId")
-	singleProductRoute.Use(productIdExtractor)
-	singleProductRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
-		productId := context.GetInt64("productId")
-		res, err := app.GetProductById(productId)
-		return res, err, false
+	singleManageProductRoute := manageProductsRoute.Group("/:categoryId")
+	singleManageProductRoute.Use(GenericIdExtractor("categoryId"))
+	singleManageProductRoute.PUT("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		categoryId := context.GetInt64("categoryId")
+		var c core.CategoryData
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+
+		_, err := app.UpdateCategory(categoryId, c.Name)
+		return gin.H{
+			"categoryId": categoryId,
+		}, err, false
 	}))
+}
 
-	secureGroup.Use(errorHandler)
-	manageProductsRoute := secureGroup.Group("/manage/products")
-	manageProductsRoute.Use(checkAdminPermissions, ResponseSerializer)
-
+func initPrivateProducts(group *gin.RouterGroup, app *core.ProductApplication) {
+	manageProductsRoute := group.Group("/products")
 	manageProductsRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		var c core.ProductData
 		if err := context.ShouldBindJSON(&c); err != nil {
@@ -80,7 +96,7 @@ func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *co
 	}))
 
 	singleManageProductRoute := manageProductsRoute.Group("/:productId")
-	singleManageProductRoute.Use(productIdExtractor)
+	singleManageProductRoute.Use(GenericIdExtractor("productId"))
 	singleManageProductRoute.PUT("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		productId := context.GetInt64("productId")
 		var c core.ProductData
@@ -110,6 +126,28 @@ func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *co
 	}))
 }
 
+func initPublicProducts(group *gin.RouterGroup, app *core.ProductApplication) {
+	productsRoute := group.Group("/products")
+	productsRoute.Use(ResponseSerializer)
+
+	singleProductRoute := productsRoute.Group("/:productId")
+	singleProductRoute.Use(GenericIdExtractor("productId"))
+	singleProductRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		productId := context.GetInt64("productId")
+		res, err := app.GetProductById(productId)
+		return res, err, false
+	}))
+}
+
+func initPublicCategories(group *gin.RouterGroup, app *core.ProductApplication) {
+	categoriesRoute := group.Group("/categories")
+	categoriesRoute.Use(ResponseSerializer)
+	categoriesRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		res, err := app.GetAllCategories()
+		return res, err, false
+	}))
+}
+
 func errorHandler(context *gin.Context) {
 	context.Next()
 
@@ -127,22 +165,11 @@ func errorHandler(context *gin.Context) {
 	}
 }
 
-// Извлечение ИД заказа
-func productIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "productId")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("productId", id)
-
-	context.Next()
-}
-
 func checkAdminPermissions(context *gin.Context) {
-	/*FIXME вернуть role := jwt.ExtractClaims(context)[RoleKey]
+	role := jwt.ExtractClaims(context)[RoleKey]
 	if RoleAdmin != role {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
-	}*/
+	}
 
 	context.Next()
 }

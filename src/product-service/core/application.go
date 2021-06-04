@@ -1,7 +1,6 @@
 package core
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
@@ -10,13 +9,20 @@ import (
 
 type ProductApplication struct {
 	productRepository  *ProductRepository
+	categoryRepository *CategoryRepository
 	productEventWriter *toolbox.EventWriter
 }
 
-func NewProductApplication(db *sql.DB, productEventWriter *toolbox.EventWriter) *ProductApplication {
-	var productRepository = &ProductRepository{DB: db}
+func NewProductApplication(mongo *toolbox.MongoWrapper, productEventWriter *toolbox.EventWriter) *ProductApplication {
+	var productRepository = &ProductRepository{
+		db: mongo.Db,
+	}
+	var categoryRepository = &CategoryRepository{
+		db: mongo.Db,
+	}
 	return &ProductApplication{
 		productRepository:  productRepository,
+		categoryRepository: categoryRepository,
 		productEventWriter: productEventWriter,
 	}
 }
@@ -35,9 +41,13 @@ func (app *ProductApplication) ProcessEvent(id string, eventType string, data in
 }
 
 func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) {
-	success, err := app.productRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description)
+	var wrappedArray []int64
+	if data.CategoryId != nil {
+		wrappedArray = data.CategoryId
+	}
+	success, err := app.productRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description, wrappedArray)
 	if err != nil || !success {
-		log.Error("Error creating order")
+		log.Error("Error creating product")
 		return
 	}
 }
@@ -45,7 +55,7 @@ func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) 
 func (app *ProductApplication) archiveProduct(data event.ProductArchived) {
 	success, err := app.productRepository.ChangeArchived(data.ProductId, true)
 	if err != nil || !success {
-		log.Error("Error creating order")
+		log.Error("Error archiving product")
 		return
 	}
 }
@@ -60,6 +70,7 @@ func (app *ProductApplication) SubmitProductCreation(data ProductData) (interfac
 		ProductId:   newId,
 		Name:        data.Name,
 		Description: data.Description,
+		CategoryId:  data.CategoryId,
 	})
 }
 
@@ -73,6 +84,7 @@ func (app *ProductApplication) SubmitProductChange(productId int64, data Product
 		ProductId:   productId,
 		Name:        data.Name,
 		Description: data.Description,
+		CategoryId:  data.CategoryId,
 	})
 }
 
@@ -87,50 +99,36 @@ func (app *ProductApplication) SubmitProductArchive(productId int64) (interface{
 	})
 }
 
-func (app *ProductApplication) GetAllProducts(filters *ProductFilters) (ProductPage, error) {
-	count, err := app.productRepository.CountByFilter(filters)
-	if err != nil {
-		return ProductPage{}, err
-	}
-
-	items, err := app.productRepository.GetByFilter(filters)
-	return ProductPage{
-		Items: items,
-		Page: &toolbox.Page{
-			PageNumber: filters.Paging.PageNumber,
-			PageSize:   filters.Paging.PageSize,
-			Count:      count,
-		},
-	}, nil
-}
-
 func (app *ProductApplication) GetProductById(productId int64) (Product, error) {
-	items, err := app.productRepository.GetByFilter(&ProductFilters{
-		ProductId: []int64{productId},
-	})
+	product, err := app.productRepository.GetById(productId)
 	if err != nil {
 		return Product{}, err
 	}
-	if len(items) < 1 {
-		return Product{}, &ProductNotFoundError{id: productId}
-	} else {
-		return items[0], nil
+	return product, nil
+}
+
+func (app *ProductApplication) GetAllCategories() ([]Category, error) {
+	categories, err := app.categoryRepository.GetAll()
+	if err != nil {
+		return []Category{}, err
 	}
+	return categories, nil
 }
 
-type ProductFilters struct {
-	Paging           *toolbox.Pageable
-	ProductId        []int64 `json:"productId"`
-	NameInfix        string  `json:"nameInfix"`
-	DescriptionInfix string  `json:"descriptionInfix"`
+func (app *ProductApplication) CreateCategory(name string) (int64, error) {
+	return app.categoryRepository.CreateOrUpdate(-1, name)
 }
 
-type ProductPage struct {
-	Page  *toolbox.Page `json:"page"`
-	Items []Product     `json:"items"`
+func (app *ProductApplication) UpdateCategory(categoryId int64, name string) (int64, error) {
+	return app.categoryRepository.CreateOrUpdate(categoryId, name)
 }
 
 type ProductData struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description" binding:"required"`
+	Name        string  `json:"name" binding:"required"`
+	Description string  `json:"description" binding:"required"`
+	CategoryId  []int64 `json:"categoryId"`
+}
+
+type CategoryData struct {
+	Name string `json:"name" binding:"required"`
 }

@@ -1,41 +1,106 @@
 package core
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/antlapit/otus-architect/api/event"
+	"github.com/antlapit/otus-architect/api/rest"
+	"github.com/antlapit/otus-architect/toolbox"
+	"math/big"
 )
 
 type PriceApplication struct {
-	priceRepository *PriceRepository
+	priceRepository    *PriceRepository
+	productEventWriter *toolbox.EventWriter
 }
 
-func NewPriceApplication(db *sql.DB) *PriceApplication {
-	var priceRepository = &PriceRepository{DB: db}
+func NewPriceApplication(mongo *toolbox.MongoWrapper, productEventWriter *toolbox.EventWriter) *PriceApplication {
+	var priceRepository = &PriceRepository{
+		db: mongo.Db,
+	}
 
 	return &PriceApplication{
-		priceRepository: priceRepository,
+		priceRepository:    priceRepository,
+		productEventWriter: productEventWriter,
 	}
-}
-
-func (app *PriceApplication) GetAllPrices(filters *PriceFilters) ([]Price, error) {
-	return app.priceRepository.GetPricesByFilter(filters)
 }
 
 func (app *PriceApplication) ProcessEvent(id string, eventType string, data interface{}) {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
-	// TODO implement
-	/*switch data.(type) {
-	case event.ProductCreated:
-		app.createProduct(data.(event.ProductCreated))
-		break
-	case event.ProductArchived:
-		app.createUser(data.(event.UserCreated))
+	switch data.(type) {
+	case event.ProductPriceChanged:
+		app.createOrUpdatePrices(data.(event.ProductPriceChanged))
 		break
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
-	}*/
+	}
 }
 
-type PriceFilters struct {
-	ProductIds []string `json:"productIds" binding:"required"`
+func (app *PriceApplication) SubmitProductPriceChanged(productId int64, data ProductPricesData) (interface{}, error) {
+	return app.productEventWriter.WriteEvent(event.EVENT_PRODUCT_PRICE_CHANGED, event.ProductPriceChanged{
+		ProductId:        productId,
+		BasePrice:        data.BasePrice,
+		AdditionalPrices: data.AdditionalPrices,
+	})
+}
+
+func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged) {
+	productId := data.ProductId
+	additionalAttributes := []Price{}
+	if data.AdditionalPrices != nil {
+		for quantity, value := range data.AdditionalPrices {
+			additionalAttributes = append(additionalAttributes, Price{
+				Quantity: quantity,
+				Value:    value,
+			})
+		}
+	}
+
+	app.priceRepository.SavePrices(productId,
+		Price{
+			Quantity: 1,
+			Value:    data.BasePrice,
+		},
+		additionalAttributes,
+	)
+}
+
+func (app *PriceApplication) GetProductPrices(productId int64) (ProductPrices, error) {
+	return app.priceRepository.GetPricesByProductId(productId)
+}
+
+func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (rest.CalculationResult, error) {
+	keys := make([]int64, 0, len(req))
+	for k := range req {
+		keys = append(keys, k)
+	}
+
+	prices, err := app.priceRepository.GetAllPricesByProductIds(keys)
+	if err != nil {
+		return rest.CalculationResult{}, err
+	}
+
+	mappedPrices := map[int64]ProductPrices{}
+	for _, price := range prices {
+		mappedPrices[price.Id] = price
+	}
+
+	result := rest.CalculationResult{}
+	for _, key := range keys {
+		quantity := req[key]
+		price := mappedPrices[key]
+		value := price.getPriceByQuantity(quantity)
+		multipliedVal := big.NewFloat(0).Mul(value, big.NewFloat(float64(quantity))).SetPrec(2)
+		result.Items[key] = rest.ItemCalculationResult{
+			BasePrice: price.BasePrice.Value,
+			CalcPrice: value,
+			Total:     multipliedVal,
+		}
+		result.Total.Add(result.Total, multipliedVal)
+	}
+	return result, nil
+}
+
+type ProductPricesData struct {
+	BasePrice        *big.Float           `json:"basePrice" binding:"required"`
+	AdditionalPrices map[int64]*big.Float `json:"additionalPrices"`
 }

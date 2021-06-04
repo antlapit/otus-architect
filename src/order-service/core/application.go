@@ -13,7 +13,7 @@ type OrderApplication struct {
 	orderRepository  *OrderRepository
 	itemRepository   *ItemRepository
 	orderEventWriter *toolbox.EventWriter
-	productsCatalog  *ProductsCatalog
+	priceService     *PriceService
 }
 
 func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *OrderApplication {
@@ -24,7 +24,7 @@ func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *Ord
 		orderRepository:  orderRepository,
 		itemRepository:   itemRepository,
 		orderEventWriter: orderEventWriter,
-		productsCatalog:  &ProductsCatalog{},
+		priceService:     &PriceService{},
 	}
 }
 
@@ -250,9 +250,19 @@ func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) {
 			log.Error(err.Error())
 			return
 		}
-		price := c.productsCatalog.GetPrice(item.ProductId)
-		quantPrice := new(big.Float).Mul(price, big.NewFloat(float64(item.Quantity))).SetPrec(2)
-		total = total.Add(total, quantPrice)
+		orderItem, err := c.itemRepository.GetItem(order.Id, item.ProductId)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+
+		basePrice, calcPrice, itemTotal, err := c.priceService.GetPrice(item.ProductId, orderItem.Quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+		c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		total = total.Add(total, itemTotal)
 	}
 	_, err = c.orderRepository.ModifyTotal(order.Id, total)
 	if err != nil {
@@ -279,9 +289,19 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
 			log.Error(err.Error())
 			return
 		}
-		price := c.productsCatalog.GetPrice(item.ProductId)
-		quantPrice := new(big.Float).Neg(new(big.Float).Mul(price, big.NewFloat(float64(item.Quantity))).SetPrec(2))
-		total = total.Add(total, quantPrice)
+		orderItem, err := c.itemRepository.GetItem(order.Id, item.ProductId)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+
+		basePrice, calcPrice, itemTotal, err := c.priceService.GetPrice(item.ProductId, orderItem.Quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return
+		}
+		c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		total = total.Add(total, itemTotal)
 	}
 	_, err = c.orderRepository.ModifyTotal(order.Id, total)
 	if err != nil {

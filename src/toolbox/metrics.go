@@ -67,8 +67,24 @@ func initDbParamsApi(engine *gin.Engine, config *DatabaseConfig) {
 	})
 }
 
-func initTechResources(engine *gin.Engine, config *DatabaseConfig) {
+func initMongoParamsApi(engine *gin.Engine, config *MongoConfig) {
+	if config == nil {
+		return
+	}
+	engine.GET("/mongo", func(context *gin.Context) {
+		context.JSON(200, gin.H{
+			"host":     config.Host,
+			"port":     config.Port,
+			"user":     config.User,
+			"password": config.Password,
+			"name":     config.Name,
+		})
+	})
+}
+
+func initTechResources(engine *gin.Engine, config *DatabaseConfig, mongoConfig *MongoConfig) {
 	initMetricsApi(engine)
 	initHealthApi(engine)
 	initDbParamsApi(engine, config)
+	initMongoParamsApi(engine, mongoConfig)
 }

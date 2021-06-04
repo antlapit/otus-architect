@@ -32,7 +32,6 @@ FROM scratch
 COPY --from=builder /dist/main /
 
 COPY keys /keys
-COPY price-service/migrations /migrations
 
 # Command to run
 ENTRYPOINT ["/main"]

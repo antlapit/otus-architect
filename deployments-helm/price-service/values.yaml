@@ -34,12 +34,12 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-postgresql:
-  postgresqlHost: postgres-postgresql
-  postgresqlPort: 5432
-  postgresqlDatabase: prices
-  postgresqlUsername: prices
-  postgresqlPassword: uF9jhWwuFNSms7KV
+mongo:
+  mongoHost: mongodb
+  mongoPort: 27017
+  mongoDatabase: prices
+  mongoUsername: prices
+  mongoPassword: DGYSk3taBVaNcC5N
 
 health:
   path: /health

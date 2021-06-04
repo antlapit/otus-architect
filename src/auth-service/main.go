@@ -26,7 +26,7 @@ func main() {
 		var app = core.NewAuthApplication(db, eventWriter)
 
 		authConfig := initAuthConfig(app)
-		engine, jwtMiddleware, secureGroup, publicGroup := InitGin(authConfig, dbConfig)
+		engine, jwtMiddleware, secureGroup, publicGroup := InitGin(authConfig, dbConfig, nil)
 
 		initApi(secureGroup, publicGroup, authConfig, jwtMiddleware, app, eventWriter)
 		initListeners(kafka, userEventsMarshaller, app)

@@ -19,10 +19,10 @@ serviceMonitor:
 config:
   datasource:
     host: postgres-postgresql
-    user: products
+    user: productsearch
     password: qwJHMsPkVWx4SFqm
     port: "5432"
-    database: s
+    database: productsearch
   queries: |-
     pg_replication:
       query: "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) as lag"

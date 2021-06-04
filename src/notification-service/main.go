@@ -18,7 +18,7 @@ func main() {
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
 		kafka := InitKafkaDefault()
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
@@ -42,8 +42,8 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.No
 func initApi(secureGroup *gin.RouterGroup, app *core.NotificationApplication) {
 	secureGroup.Use(errorHandler)
 
-	ordersRoute := secureGroup.Group("/users/:id/notifications")
-	ordersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	ordersRoute := secureGroup.Group("/users/:userId/notifications")
+	ordersRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
 
 	ordersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
@@ -76,17 +76,6 @@ func checkUserPermissions(context *gin.Context) {
 	if userId != tokenUserId {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
 	}
-
-	context.Next()
-}
-
-// Извлечение ИД пользователя из URL
-func userIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "id")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("userId", id)
 
 	context.Next()
 }

@@ -18,7 +18,7 @@ func main() {
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
 		kafka := InitKafkaDefault()
 
@@ -43,8 +43,8 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	secureGroup.Use(errorHandler)
 
-	userOrdersRoute := secureGroup.Group("/users/:id/orders")
-	userOrdersRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	userOrdersRoute := secureGroup.Group("/users/:userId/orders")
+	userOrdersRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
 
 	userOrdersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
@@ -61,7 +61,7 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	}))
 
 	singleUserOrderRoute := userOrdersRoute.Group("/:orderId")
-	singleUserOrderRoute.Use(orderIdIdExtractor)
+	singleUserOrderRoute.Use(GenericIdExtractor("orderId"))
 	singleUserOrderRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.GetOrder(userId, orderId)
@@ -152,28 +152,6 @@ func checkAdminPermissions(context *gin.Context) {
 	if RoleAdmin != role {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
 	}
-
-	context.Next()
-}
-
-// Извлечение ИД пользователя из URL
-func userIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "id")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("userId", id)
-
-	context.Next()
-}
-
-// Извлечение ИД заказа
-func orderIdIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "orderId")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("orderId", id)
 
 	context.Next()
 }

@@ -3,9 +3,9 @@ kind: ConfigMap
 metadata:
   name: price-config
 data:
-  DB_HOST: {{ .Values.postgresql.postgresqlHost | quote }}
-  DB_PORT: {{ .Values.postgresql.postgresqlPort | quote }}
-  DB_NAME: {{ .Values.postgresql.postgresqlDatabase | quote }}
+  MONGO_HOST: {{ .Values.mongo.mongoHost | quote }}
+  MONGO_PORT: {{ .Values.mongo.mongoPort | quote }}
+  MONGO_NAME: {{ .Values.mongo.mongoDatabase | quote }}
   AUTH_REALM: {{ .Values.jwt.realm | quote }}
   AUTH_PUBLIC_KEY_FILE: {{ .Values.jwt.publicKeyFile | quote }}
   AUTH_PRIVATE_KEY_FILE: {{ .Values.jwt.privateKeyFile | quote }}
@@ -20,5 +20,5 @@ metadata:
   name: price-secret
 type: Opaque
 data:
-  DB_USER: {{ .Values.postgresql.postgresqlUsername | b64enc | quote }}
-  DB_PASSWORD: {{ .Values.postgresql.postgresqlPassword | b64enc | quote }}
+  MONGO_USER: {{ .Values.mongo.mongoUsername | b64enc | quote }}
+  MONGO_PASSWORD: {{ .Values.mongo.mongoPassword | b64enc | quote }}

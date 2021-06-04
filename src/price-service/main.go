@@ -2,32 +2,30 @@ package main
 
 import (
 	"github.com/antlapit/otus-architect/api/event"
+	"github.com/antlapit/otus-architect/api/rest"
 	"github.com/antlapit/otus-architect/price-service/core"
 	. "github.com/antlapit/otus-architect/toolbox"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"net/http"
-	"os"
 )
 
 func main() {
-	serviceMode := os.Getenv("SERVICE_MODE")
-	db, driver, dbConfig := InitDefaultDatabase()
+	mongo := InitDefaultMongo()
+	defer mongo.Disconnect()
 
-	if serviceMode == "INIT" {
-		MigrateDb(driver, dbConfig)
-	} else {
-		engine, _, _, publicGroup := InitGinDefault(dbConfig)
+	engine, _, secureGroup, publicGroup := InitGinDefault(nil, mongo.Config)
 
-		kafka := InitKafkaDefault()
+	kafka := InitKafkaDefault()
 
-		eventsMarshaller := NewEventMarshaller(event.AllEvents)
+	eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var app = core.NewPriceApplication(db)
-		initListeners(kafka, eventsMarshaller, app)
-		initApi(publicGroup, app)
-		engine.Run(":8006")
-	}
+	var productEventWriter = kafka.StartNewWriter(event.TOPIC_PRODUCTS, eventsMarshaller)
+	var app = core.NewPriceApplication(mongo, productEventWriter)
+	initListeners(kafka, eventsMarshaller, app)
+	initApi(publicGroup, secureGroup, app)
+	engine.Run(":8006")
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.PriceApplication) {
@@ -37,20 +35,57 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Pr
 	kafka.StartNewEventReader(event.TOPIC_PRODUCTS, "price-service", marshaller, f)
 }
 
-func initApi(publicGroup *gin.RouterGroup, app *core.PriceApplication) {
-	publicGroup.Use(errorHandler)
+func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *core.PriceApplication) {
+	publicGroup.Use(errorHandler, ResponseSerializer)
+	initPublicPrices(publicGroup, app)
 
-	pricesRoute := publicGroup.Group("/prices")
-	pricesRoute.Use(errorHandler, ResponseSerializer)
+	secureGroup.Use(errorHandler)
+	manageGroup := secureGroup.Group("/manage")
+	manageGroup.Use(checkAdminPermissions, ResponseSerializer)
 
-	pricesRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
-		var filters core.PriceFilters
-		if err := context.ShouldBindJSON(&filters); err != nil {
+	initPrivatePrices(manageGroup, app)
+}
+
+func initPrivatePrices(group *gin.RouterGroup, app *core.PriceApplication) {
+	managePricesRoute := group.Group("/prices")
+	singleManageProductRoute := managePricesRoute.Group("/by-product-id/:productId")
+	singleManageProductRoute.Use(GenericIdExtractor("productId"))
+	singleManageProductRoute.PUT("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		productId := context.GetInt64("productId")
+		var c core.ProductPricesData
+		if err := context.ShouldBindJSON(&c); err != nil {
 			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-			return nil, nil, false
+			return nil, nil, true
 		}
 
-		res, err := app.GetAllPrices(&filters)
+		res, err := app.SubmitProductPriceChanged(productId, c)
+		return gin.H{
+			"eventId": res,
+		}, err, false
+	}))
+}
+
+func initPublicPrices(group *gin.RouterGroup, app *core.PriceApplication) {
+	pricesRoute := group.Group("/prices")
+
+	productsRoute := pricesRoute.Group("/by-product-id")
+	singleProductRoute := productsRoute.Group("/:productId")
+	singleProductRoute.Use(GenericIdExtractor("productId"))
+	singleProductRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		productId := context.GetInt64("productId")
+		res, err := app.GetProductPrices(productId)
+		return res, err, false
+	}))
+
+	calculateRoute := pricesRoute.Group("/calculate")
+	calculateRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		var c rest.CalculationRequest
+		if err := context.ShouldBindJSON(&c); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+
+		res, err := app.CalculateTotal(c)
 		return res, err, false
 	}))
 }
@@ -70,4 +105,13 @@ func errorHandler(context *gin.Context) {
 			ErrorResponse(context, http.StatusInternalServerError, err, "FA02")
 		}
 	}
+}
+
+func checkAdminPermissions(context *gin.Context) {
+	role := jwt.ExtractClaims(context)[RoleKey]
+	if RoleAdmin != role {
+		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
+	}
+
+	context.Next()
 }
