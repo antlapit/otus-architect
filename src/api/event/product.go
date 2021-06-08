@@ -27,7 +27,7 @@ type ProductArchived struct {
 }
 
 type ProductPriceChanged struct {
-	ProductId        int64                `json:"productId" binding:"required"`
-	BasePrice        *big.Float           `json:"basePrice" binding:"required"`
-	AdditionalPrices map[int64]*big.Float `json:"additionalPrices"`
+	ProductId        int64                 `json:"productId" binding:"required"`
+	BasePrice        *big.Float            `json:"basePrice" binding:"required"`
+	AdditionalPrices map[string]*big.Float `json:"additionalPrices"`
 }

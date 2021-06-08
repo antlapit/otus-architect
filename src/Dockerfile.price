@@ -10,13 +10,21 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY price-service /price-service
 COPY api /api
 COPY toolbox /toolbox
+
+COPY price-service/go.mod /price-service/go.mod
+COPY price-service/go.sum /price-service/go.sum
 
 WORKDIR /price-service
 
 RUN go mod download
+
+WORKDIR /
+
+COPY price-service /price-service
+
+WORKDIR /price-service
 
 # Build the application
 RUN go build -o main .

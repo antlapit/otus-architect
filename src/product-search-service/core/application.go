@@ -6,6 +6,7 @@ import (
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
 	"github.com/prometheus/common/log"
+	"math/big"
 )
 
 type ProductSearchApplication struct {
@@ -62,26 +63,48 @@ func (app *ProductSearchApplication) GetAllProducts(filters *ProductFilters) (Pr
 	}
 
 	items, err := app.productSearchRepository.GetByFilter(filters)
-	return ProductPage{
-		Items: items,
-		Page: &toolbox.Page{
+	var page toolbox.Page
+	if filters.Paging != nil {
+		page = toolbox.Page{
 			PageNumber: filters.Paging.PageNumber,
 			PageSize:   filters.Paging.PageSize,
 			Count:      count,
-		},
+			Unpaged:    false,
+		}
+	} else {
+		page = toolbox.Page{
+			Count:   count,
+			Unpaged: true,
+		}
+	}
+	return ProductPage{
+		Items: items,
+		Page:  &page,
 	}, nil
 }
 
 func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged) {
-
+	var minPrice = data.BasePrice
+	var maxPrice = data.BasePrice
+	for _, price := range data.AdditionalPrices {
+		if minPrice.Cmp(price) > 0 {
+			minPrice = price
+		}
+		if maxPrice.Cmp(price) < 0 {
+			maxPrice = price
+		}
+	}
+	app.productSearchRepository.UpdatePrice(data.ProductId, minPrice, maxPrice)
 }
 
 type ProductFilters struct {
 	Paging           *toolbox.Pageable
-	ProductId        []int64 `json:"productId"`
-	NameInfix        string  `json:"nameInfix"`
-	DescriptionInfix string  `json:"descriptionInfix"`
-	CategoryId       []int64 `json:"categoryId"`
+	ProductId        []int64    `json:"productId"`
+	NameInfix        string     `json:"nameInfix"`
+	DescriptionInfix string     `json:"descriptionInfix"`
+	CategoryId       []int64    `json:"categoryId"`
+	MinPrice         *big.Float `json:"minPrice"`
+	MaxPrice         *big.Float `json:"maxPrice"`
 }
 
 type ProductPage struct {

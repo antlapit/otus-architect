@@ -141,7 +141,7 @@ func (repository *ItemRepository) ModifyPrices(orderId int64, productId int64, b
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, productId, basePrice, calcPrice, total)
+	res, err := stmt.Exec(orderId, productId, basePrice.String(), calcPrice.String(), total.String())
 	if err != nil {
 		return false, err
 	}

@@ -115,12 +115,12 @@ func (app *ProductApplication) GetAllCategories() ([]Category, error) {
 	return categories, nil
 }
 
-func (app *ProductApplication) CreateCategory(name string) (int64, error) {
-	return app.categoryRepository.CreateOrUpdate(-1, name)
+func (app *ProductApplication) CreateCategory(name string, description string) (int64, error) {
+	return app.categoryRepository.CreateOrUpdate(-1, name, description)
 }
 
-func (app *ProductApplication) UpdateCategory(categoryId int64, name string) (int64, error) {
-	return app.categoryRepository.CreateOrUpdate(categoryId, name)
+func (app *ProductApplication) UpdateCategory(categoryId int64, name string, description string) (int64, error) {
+	return app.categoryRepository.CreateOrUpdate(categoryId, name, description)
 }
 
 type ProductData struct {
@@ -130,5 +130,6 @@ type ProductData struct {
 }
 
 type CategoryData struct {
-	Name string `json:"name" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description" binding:"required"`
 }

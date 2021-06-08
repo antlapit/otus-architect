@@ -19,29 +19,40 @@ type OrderApplication struct {
 func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *OrderApplication {
 	var orderRepository = &OrderRepository{DB: db}
 	var itemRepository = &ItemRepository{DB: db}
+	var priceService = NewPriceService()
 
 	return &OrderApplication{
 		orderRepository:  orderRepository,
 		itemRepository:   itemRepository,
 		orderEventWriter: orderEventWriter,
-		priceService:     &PriceService{},
+		priceService:     priceService,
 	}
 }
 
-func (c *OrderApplication) GetAllOrders(filter *OrderFilter) (OrderPage, error) {
-	count, err := c.orderRepository.CountByFilter(filter)
+func (c *OrderApplication) GetAllOrders(filters *OrderFilter) (OrderPage, error) {
+	count, err := c.orderRepository.CountByFilter(filters)
 	if err != nil {
 		return OrderPage{}, err
 	}
 
-	items, err := c.orderRepository.GetByFilter(filter)
+	items, err := c.orderRepository.GetByFilter(filters)
+	var page toolbox.Page
+	if filters.Paging != nil {
+		page = toolbox.Page{
+			PageNumber: filters.Paging.PageNumber,
+			PageSize:   filters.Paging.PageSize,
+			Count:      count,
+			Unpaged:    false,
+		}
+	} else {
+		page = toolbox.Page{
+			Count:   count,
+			Unpaged: true,
+		}
+	}
 	return OrderPage{
 		Items: items,
-		Page: &toolbox.Page{
-			PageNumber: filter.Paging.PageNumber,
-			PageSize:   filter.Paging.PageSize,
-			Count:      count,
-		},
+		Page:  &page,
 	}, nil
 }
 

@@ -10,13 +10,21 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY notification-service /notification-service
 COPY api /api
 COPY toolbox /toolbox
+
+COPY notification-service/go.mod /notification-service/go.mod
+COPY notification-service/go.sum /notification-service/go.sum
 
 WORKDIR /notification-service
 
 RUN go mod download
+
+WORKDIR /
+
+COPY notification-service /notification-service
+
+WORKDIR /notification-service
 
 # Build the application
 RUN go build -o main .

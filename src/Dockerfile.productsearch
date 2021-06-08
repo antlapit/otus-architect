@@ -10,13 +10,21 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY product-search-service /product-search-service
 COPY api /api
 COPY toolbox /toolbox
+
+COPY product-search-service/go.mod /product-search-service/go.mod
+COPY product-search-service/go.sum /product-search-service/go.sum
 
 WORKDIR /product-search-service
 
 RUN go mod download
+
+WORKDIR /
+
+COPY product-search-service /product-search-service
+
+WORKDIR /product-search-service
 
 # Build the application
 RUN go build -o main .

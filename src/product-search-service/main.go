@@ -70,12 +70,3 @@ func errorHandler(context *gin.Context) {
 		}
 	}
 }
-
-func checkAdminPermissions(context *gin.Context) {
-	/*FIXME вернуть role := jwt.ExtractClaims(context)[RoleKey]
-	if RoleAdmin != role {
-		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
-	}*/
-
-	context.Next()
-}

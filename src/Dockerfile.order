@@ -10,13 +10,21 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY order-service /order-service
-COPY api /api
 COPY toolbox /toolbox
+COPY api /api
+
+COPY order-service/go.mod /order-service/go.mod
+COPY order-service/go.sum /order-service/go.sum
 
 WORKDIR /order-service
 
 RUN go mod download
+
+WORKDIR /
+
+COPY order-service /order-service
+
+WORKDIR /order-service
 
 # Build the application
 RUN go build -o main .

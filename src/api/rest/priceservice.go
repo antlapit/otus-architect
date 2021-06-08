@@ -1,16 +1,21 @@
 package rest
 
-import "math/big"
-
 type CalculationRequest = map[int64]int64
 
 type ItemCalculationResult struct {
-	BasePrice *big.Float `json:"basePrice" binding:"required"`
-	CalcPrice *big.Float `json:"calcPrice" binding:"required"`
-	Total     *big.Float `json:"total" binding:"required"`
+	BasePrice string `json:"basePrice" binding:"required"`
+	CalcPrice string `json:"calcPrice" binding:"required"`
+	Total     string `json:"total" binding:"required"`
 }
 
 type CalculationResult struct {
-	Total *big.Float                      `json:"total"`
+	Total string                          `json:"total"`
 	Items map[int64]ItemCalculationResult `json:"items"`
+}
+
+func NewCalculationResult() *CalculationResult {
+	return &CalculationResult{
+		Total: "0",
+		Items: map[int64]ItemCalculationResult{},
+	}
 }

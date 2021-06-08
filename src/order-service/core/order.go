@@ -18,7 +18,7 @@ type Order struct {
 	Id     int64      `json:"orderId"`
 	UserId int64      `json:"userId" binding:"required"`
 	Status string     `json:"status" binding:"required"`
-	Total  *big.Float `json:"total" binding:"required"`
+	Total  string     `json:"total" binding:"required"`
 	Date   *time.Time `json:"date" binding:"required"`
 }
 
@@ -34,9 +34,9 @@ type OrderNotFoundError struct {
 
 func (error *OrderNotFoundError) Error() string {
 	if error.orderId > 0 {
-		return fmt.Sprintf("Счет на оплату для заказа с ИД %s не найден", strconv.FormatInt(error.orderId, 10))
+		return fmt.Sprintf("Заказ с ИД %s не найден", strconv.FormatInt(error.orderId, 10))
 	} else {
-		return fmt.Sprintf("Счет на оплату с ИД %s не найден", strconv.FormatInt(error.id, 10))
+		return fmt.Sprintf("Заказ с ИД %s не найден", strconv.FormatInt(error.id, 10))
 	}
 }
 
@@ -83,7 +83,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 
 func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, user_id, status, total FROM orders WHERE id = $1")
+	stmt, err := db.Prepare("SELECT id, user_id, status, total, date FROM orders WHERE id = $1")
 	if err != nil {
 		return Order{}, err
 	}
@@ -92,7 +92,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	var order Order
 	var totalVal sql.NullFloat64
 	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
-	order.Total = big.NewFloat(totalVal.Float64)
+	order.Total = big.NewFloat(totalVal.Float64).String()
 	if err != nil {
 		// constraints
 		return Order{}, &OrderNotFoundError{id: orderId}
@@ -127,7 +127,7 @@ func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, er
 			if err != nil {
 				return []Order{}, err
 			}
-			order.Total = big.NewFloat(totalVal.Float64)
+			order.Total = big.NewFloat(totalVal.Float64).String()
 			result = append(result, order)
 		}
 		return result, nil

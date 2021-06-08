@@ -20,7 +20,8 @@ type ProductPrices struct {
 
 func (p *ProductPrices) getPriceByQuantity(quantity int64) *big.Float {
 	if quantity == p.BasePrice.Quantity {
-		return p.BasePrice.Value
+		price, _ := new(big.Float).SetString(p.BasePrice.Value)
+		return price
 	}
 
 	sort.Slice(p.AdditionalPrices, func(i, j int) bool {
@@ -29,16 +30,18 @@ func (p *ProductPrices) getPriceByQuantity(quantity int64) *big.Float {
 
 	for _, price := range p.AdditionalPrices {
 		if quantity > price.Quantity {
-			return price.Value
+			p, _ := new(big.Float).SetString(price.Value)
+			return p
 		}
 	}
-	return p.BasePrice.Value
+	price, _ := new(big.Float).SetString(p.BasePrice.Value)
+	return price
 
 }
 
 type Price struct {
-	Quantity int64      `json:"quantity" bson:"quantity,omitempty" binding:"required"`
-	Value    *big.Float `json:"value" bson:"value,omitempty" binding:"required"`
+	Quantity int64  `json:"quantity" bson:"quantity,omitempty" binding:"required"`
+	Value    string `json:"value" bson:"value,omitempty" binding:"required"`
 }
 
 const pricesCollectionName = "prices"
@@ -101,7 +104,7 @@ func (repository *PriceRepository) GetAllPricesByProductIds(productIds []int64) 
 			var prices ProductPrices
 			err = cur.Decode(&prices)
 			if err != nil {
-				log.Fatal(err)
+				log.Warn(err)
 			}
 			result = append(result, prices)
 		}

@@ -1,7 +1,5 @@
 package event
 
-import "math/big"
-
 const (
 	TOPIC_ORDERS              = "order.events"
 	EVENT_ORDER_CREATED       = "order.created"
@@ -27,9 +25,9 @@ type OrderCreated struct {
 }
 
 type OrderConfirmed struct {
-	OrderId int64      `json:"orderId" binding:"required"`
-	UserId  int64      `json:"userId" binding:"required"`
-	Total   *big.Float `json:"total" binding:"required"`
+	OrderId int64  `json:"orderId" binding:"required"`
+	UserId  int64  `json:"userId" binding:"required"`
+	Total   string `json:"total" binding:"required"`
 	Items   []OrderItem
 }
 
@@ -39,9 +37,9 @@ type OrderRejected struct {
 }
 
 type OrderCompleted struct {
-	OrderId int64      `json:"orderId" binding:"required"`
-	UserId  int64      `json:"userId" binding:"required"`
-	Total   *big.Float `json:"total" binding:"required"`
+	OrderId int64  `json:"orderId" binding:"required"`
+	UserId  int64  `json:"userId" binding:"required"`
+	Total   string `json:"total" binding:"required"`
 	Items   []OrderItem
 }
 

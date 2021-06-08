@@ -66,9 +66,11 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 	if bill.Status != "CREATED" {
 		return
 	}
-	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(bill.Total))
+	billTotal, _ := new(big.Float).SetString(bill.Total)
+	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(billTotal))
 	if err != nil {
 		log.Error(err.Error())
+		return
 	}
 	if !res {
 		log.Error("Not enough money or something happened")
@@ -178,5 +180,5 @@ func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
 }
 
 type AddMoneyRequest struct {
-	Money *big.Float `json:"money" binding:"required"`
+	Money string `json:"money" binding:"required"`
 }

@@ -57,7 +57,7 @@ func initPrivateCategories(group *gin.RouterGroup, app *core.ProductApplication)
 			return nil, nil, true
 		}
 
-		categoryId, err := app.CreateCategory(c.Name)
+		categoryId, err := app.CreateCategory(c.Name, c.Description)
 		return gin.H{
 			"categoryId": categoryId,
 		}, err, false
@@ -73,7 +73,7 @@ func initPrivateCategories(group *gin.RouterGroup, app *core.ProductApplication)
 			return nil, nil, true
 		}
 
-		_, err := app.UpdateCategory(categoryId, c.Name)
+		_, err := app.UpdateCategory(categoryId, c.Name, c.Description)
 		return gin.H{
 			"categoryId": categoryId,
 		}, err, false

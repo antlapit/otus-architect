@@ -8,9 +8,9 @@ import (
 )
 
 type Account struct {
-	Id     int64      `json:"accountId"`
-	UserId int64      `json:"userId" binding:"required"`
-	Money  *big.Float `json:"money" binding:"required"`
+	Id     int64  `json:"accountId"`
+	UserId int64  `json:"userId" binding:"required"`
+	Money  string `json:"money" binding:"required"`
 }
 
 type AccountNotFoundError struct {
@@ -78,12 +78,12 @@ func (repository *AccountRepository) GetByUserId(userId int64) (Account, error) 
 		// constraints
 		return Account{}, &AccountNotFoundError{userId: userId}
 	}
-	account.Money = big.NewFloat(moneyVal.Float64)
+	account.Money = big.NewFloat(moneyVal.Float64).String()
 
 	return account, nil
 }
 
-func (repository *AccountRepository) AddMoneyByUserId(userId int64, money *big.Float) (bool, error) {
+func (repository *AccountRepository) AddMoneyByUserId(userId int64, money string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
@@ -96,7 +96,7 @@ func (repository *AccountRepository) AddMoneyByUserId(userId int64, money *big.F
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(userId, money.String())
+	res, err := stmt.Exec(userId, money)
 	if err != nil {
 		return false, err
 	}

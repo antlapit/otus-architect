@@ -128,8 +128,24 @@ Homework Otus Architect
 Метрики PostgreSQL - `grafana/dashboard_postgresql.json`
 
 ## Тестирование сценариев
-Запуск сценариев с помощью newman: `newman run examples/OTUS\ Architect.postman_collection.json`.
-В коллекции 3 сценария:
+Запуск сценариев работы с товарами с помощью newman: `newman run examples/OTUS\ Architect\ Users.postman_collection.json`.
+В коллекцию входят сценарии:
+- `Categories management`
+  - Регистрация администратора
+  - Логин
+  - Создание категории товара
+  - Получение категории товара без аутентификации
+- `Product management`
+  - Регистрация администратора
+  - Логин
+  - Создание товара в каталоге
+  - Создание нескольких цен на товар
+  - Поиск товара по фильтру без аутентификации
+  - Получение данных товара без аутентификации
+
+
+Запуск сценариев работы с пользователями с помощью newman: `newman run examples/OTUS\ Architect\ Products.postman_collection.json`.
+В коллекцию входят сценарии:
 - `Register`:
   - Регистрация пользователя
   - Проверка, что профиль недоступен без аутентификации
@@ -154,6 +170,9 @@ Homework Otus Architect
   - Регистрация пользователя 2
   - Логин пользователя 2
   - Проверка профиля пользователя 2
+
+Запуск сценариев работы с заказами с помощью newman: `newman run examples/OTUS\ Architect\ Orders.postman_collection.json`.
+В коллекцию входят сценарии:
 - `Full Order Scenario`:
   - Регистрация пользователя
   - Логин пользователя

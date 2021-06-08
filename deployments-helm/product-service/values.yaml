@@ -35,7 +35,7 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 mongo:
-  mongoHost: mongo
+  mongoHost: mongodb
   mongoPort: 27017
   mongoDatabase: products
   mongoUsername: products

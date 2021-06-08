@@ -88,6 +88,7 @@ type Page struct {
 	PageNumber uint64 `json:"pageNumber"`
 	PageSize   uint64 `json:"pageSize"`
 	Count      uint64 `json:"count"`
+	Unpaged    bool   `json:"unpaged"`
 }
 
 func (o *Order) Direction() string {

@@ -10,8 +10,9 @@ import (
 )
 
 type Category struct {
-	Id   int64  `json:"categoryId" bson:"_id" binding:"required"`
-	Name string `json:"name" bson:"name" binding:"required"`
+	Id          int64  `json:"categoryId" bson:"_id" binding:"required"`
+	Name        string `json:"name" bson:"name" binding:"required"`
+	Description string `json:"description" bson:"description" binding:"required"`
 }
 
 const categoriesCollectionName = "categories"
@@ -36,7 +37,7 @@ func (error *CategoryInvalidError) Error() string {
 	return error.message
 }
 
-func (repository *CategoryRepository) CreateOrUpdate(categoryId int64, name string) (int64, error) {
+func (repository *CategoryRepository) CreateOrUpdate(categoryId int64, name string, description string) (int64, error) {
 	collection := repository.db.Collection(categoriesCollectionName)
 	var err error
 
@@ -47,15 +48,17 @@ func (repository *CategoryRepository) CreateOrUpdate(categoryId int64, name stri
 			return -1, err
 		}
 		category := Category{
-			Id:   persistedCategoryId,
-			Name: name,
+			Id:          persistedCategoryId,
+			Name:        name,
+			Description: description,
 		}
 		_, err = collection.InsertOne(nil, category)
 	} else {
 		persistedCategoryId = categoryId
 		category := Category{
-			Id:   persistedCategoryId,
-			Name: name,
+			Id:          persistedCategoryId,
+			Name:        name,
+			Description: description,
 		}
 		res := collection.FindOneAndReplace(nil,
 			bson.M{toolbox.MongoIdField: bson.D{{"$eq", persistedCategoryId}}},
@@ -106,7 +109,7 @@ func (repository *CategoryRepository) GetAll() ([]Category, error) {
 			var category Category
 			err = cur.Decode(&category)
 			if err != nil {
-				log.Fatal(err)
+				log.Warn(err)
 			}
 			result = append(result, category)
 		}

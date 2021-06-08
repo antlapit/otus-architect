@@ -17,7 +17,8 @@ type Product struct {
 	Description string     `json:"description" binding:"required"`
 	Archived    bool       `json:"archived"`
 	CategoryId  []int64    `json:"categoryId" pg:",array"`
-	Price       *big.Float `json:"price" binding:"required"`
+	MinPrice    *big.Float `json:"minPrice" binding:"required"`
+	MaxPrice    *big.Float `json:"maxPrice" binding:"required"`
 }
 
 var DbFieldAdditionalMapping = map[string]string{
@@ -124,7 +125,7 @@ func (repository *ProductSearchRepository) CountByFilter(filter *ProductFilters)
 func (repository *ProductSearchRepository) GetByFilter(filter *ProductFilters) ([]Product, error) {
 	db := repository.DB
 
-	queryBuilder := prepareQuery([]string{"id", "name", "description", "archived", "category_id"}, filter)
+	queryBuilder := prepareQuery([]string{"id", "name", "description", "archived", "category_id", "min_price", "max_price"}, filter)
 	queryBuilder = toolbox.AddPaging(queryBuilder, filter.Paging, DbFieldAdditionalMapping)
 	query, values, err := queryBuilder.ToSql()
 
@@ -142,10 +143,14 @@ func (repository *ProductSearchRepository) GetByFilter(filter *ProductFilters) (
 		var result = make([]Product, 0)
 		for rows.Next() {
 			var product Product
-			err = rows.Scan(&product.Id, &product.Name, &product.Description, &product.Archived, (*pq.Int64Array)(&product.CategoryId))
+			var minVal sql.NullFloat64
+			var maxVal sql.NullFloat64
+			err = rows.Scan(&product.Id, &product.Name, &product.Description, &product.Archived, (*pq.Int64Array)(&product.CategoryId), &minVal, &maxVal)
 			if err != nil {
 				return []Product{}, err
 			}
+			product.MinPrice = big.NewFloat(minVal.Float64)
+			product.MaxPrice = big.NewFloat(maxVal.Float64)
 			result = append(result, product)
 		}
 		return result, nil
@@ -168,6 +173,12 @@ func prepareQuery(columns []string, filter *ProductFilters) sq.SelectBuilder {
 	if len(filter.CategoryId) > 0 {
 		predicate = append(predicate, toolbox.InIntegerArray{"category_id": filter.CategoryId})
 	}
+	if filter.MinPrice != nil {
+		predicate = append(predicate, sq.GtOrEq{"max_price": filter.MinPrice.String()})
+	}
+	if filter.MaxPrice != nil {
+		predicate = append(predicate, sq.LtOrEq{"min_price": filter.MaxPrice.String()})
+	}
 
 	qBuilder := psql.Select(columns...).From("products").
 		Where(predicate)
@@ -184,4 +195,32 @@ func (repository *ProductSearchRepository) GetNextProductId() (int64, error) {
 	}
 
 	return id, nil
+}
+
+func (repository *ProductSearchRepository) UpdatePrice(productId int64, minPrice *big.Float, maxPrice *big.Float) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE products
+				SET min_price = $1, max_price = $2
+				WHERE id = $3`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(minPrice.String(), maxPrice.String(), productId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &ProductInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &ProductNotFoundError{id: productId}
+	} else {
+		return true, nil
+	}
+	return false, nil
 }

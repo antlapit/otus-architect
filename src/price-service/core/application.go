@@ -6,6 +6,7 @@ import (
 	"github.com/antlapit/otus-architect/api/rest"
 	"github.com/antlapit/otus-architect/toolbox"
 	"math/big"
+	"strconv"
 )
 
 type PriceApplication struct {
@@ -48,9 +49,10 @@ func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged
 	additionalAttributes := []Price{}
 	if data.AdditionalPrices != nil {
 		for quantity, value := range data.AdditionalPrices {
+			q, _ := strconv.ParseInt(quantity, 10, 0)
 			additionalAttributes = append(additionalAttributes, Price{
-				Quantity: quantity,
-				Value:    value,
+				Quantity: q,
+				Value:    value.String(),
 			})
 		}
 	}
@@ -58,7 +60,7 @@ func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged
 	app.priceRepository.SavePrices(productId,
 		Price{
 			Quantity: 1,
-			Value:    data.BasePrice,
+			Value:    data.BasePrice.String(),
 		},
 		additionalAttributes,
 	)
@@ -68,7 +70,7 @@ func (app *PriceApplication) GetProductPrices(productId int64) (ProductPrices, e
 	return app.priceRepository.GetPricesByProductId(productId)
 }
 
-func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (rest.CalculationResult, error) {
+func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (*rest.CalculationResult, error) {
 	keys := make([]int64, 0, len(req))
 	for k := range req {
 		keys = append(keys, k)
@@ -76,7 +78,7 @@ func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (rest.C
 
 	prices, err := app.priceRepository.GetAllPricesByProductIds(keys)
 	if err != nil {
-		return rest.CalculationResult{}, err
+		return &rest.CalculationResult{}, err
 	}
 
 	mappedPrices := map[int64]ProductPrices{}
@@ -84,23 +86,26 @@ func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (rest.C
 		mappedPrices[price.Id] = price
 	}
 
-	result := rest.CalculationResult{}
+	result := rest.NewCalculationResult()
+	total := new(big.Float).SetFloat64(0)
 	for _, key := range keys {
 		quantity := req[key]
 		price := mappedPrices[key]
 		value := price.getPriceByQuantity(quantity)
 		multipliedVal := big.NewFloat(0).Mul(value, big.NewFloat(float64(quantity))).SetPrec(2)
+		basePrice, _ := new(big.Float).SetString(price.BasePrice.Value)
 		result.Items[key] = rest.ItemCalculationResult{
-			BasePrice: price.BasePrice.Value,
-			CalcPrice: value,
-			Total:     multipliedVal,
+			BasePrice: basePrice.String(),
+			CalcPrice: value.String(),
+			Total:     multipliedVal.String(),
 		}
-		result.Total.Add(result.Total, multipliedVal)
+		total = new(big.Float).Add(total, multipliedVal)
 	}
+	result.Total = total.String()
 	return result, nil
 }
 
 type ProductPricesData struct {
-	BasePrice        *big.Float           `json:"basePrice" binding:"required"`
-	AdditionalPrices map[int64]*big.Float `json:"additionalPrices"`
+	BasePrice        *big.Float            `json:"basePrice" binding:"required"`
+	AdditionalPrices map[string]*big.Float `json:"additionalPrices"`
 }

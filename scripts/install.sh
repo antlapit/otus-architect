@@ -12,6 +12,7 @@ helm install notification-service-release deployments-helm/notification-service
 helm install product-service-release deployments-helm/product-service
 helm install prices-service-release deployments-helm/price-service
 helm install product-search-service-release deployments-helm/product-search-service
+
 helm install krakend deployments-helm/krakend
 
 helm install prom prometheus-community/kube-prometheus-stack -f deployments/prometheus.yaml --atomic
