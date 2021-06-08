@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: antlapit/otus-architect-billing-service
   pullPolicy: IfNotPresent
-  tag: "v4"
+  tag: "v5"
 
 nameOverride: billing-service
 fullnameOverride: "billing-service"

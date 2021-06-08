@@ -1,0 +1,64 @@
+replicaCount: 1
+
+image:
+  repository: antlapit/otus-architect-price-service
+  pullPolicy: IfNotPresent
+  tag: "v1"
+
+nameOverride: price-service
+fullnameOverride: "price-service"
+
+service:
+  type: NodePort
+  port: 8006
+
+ingress:
+  enabled: false
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+mongo:
+  mongoHost: mongodb
+  mongoPort: 27017
+  mongoDatabase: prices
+  mongoUsername: prices
+  mongoPassword: DGYSk3taBVaNcC5N
+
+health:
+  path: /health
+  initialDelay: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+jwt:
+  realm: OTUS
+  publicKeyFile: keys/rsa.public
+  privateKeyFile: keys/rsa.private
+  issuer: http://arch.homework
+  audience: http://arch.homework
+
+kafka:
+  broker:
+    host: kafka-0.kafka-headless
+    port: 9092

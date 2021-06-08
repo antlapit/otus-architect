@@ -33,3 +33,7 @@ initdbScripts:
     CREATE USER users;
     ALTER USER users WITH PASSWORD '_ky62W9An32QMXPZ';
     CREATE DATABASE users WITH OWNER users;
+
+    CREATE USER productsearch;
+    ALTER USER productsearch WITH PASSWORD 'qwJHMsPkVWx4SFqm';
+    CREATE DATABASE productsearch WITH OWNER productsearch;

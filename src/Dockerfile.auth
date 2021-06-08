@@ -10,13 +10,21 @@ ENV GO111MODULE=on \
 WORKDIR /build
 
 # Copy and download dependency using go mod
-COPY auth-service /auth-service
 COPY api /api
 COPY toolbox /toolbox
+
+COPY auth-service/go.mod /auth-service/go.mod
+COPY auth-service/go.sum /auth-service/go.sum
 
 WORKDIR /auth-service
 
 RUN go mod download
+
+WORKDIR /
+
+COPY auth-service /auth-service
+
+WORKDIR /auth-service
 
 # Build the application
 RUN go build -o main .

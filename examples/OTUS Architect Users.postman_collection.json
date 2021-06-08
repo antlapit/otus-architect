@@ -1,0 +1,1059 @@
+{
+	"info": {
+		"_postman_id": "4b16d705-cfc7-48d7-b77b-e48cd5f1e34f",
+		"name": "OTUS Architect Users",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register",
+			"item": [
+				{
+					"name": "Register Init",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (unauthorized)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile (unauthorized)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"{{$randomPhoneNumber}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile After Sync",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"var jsonData = pm.response.json();",
+									"if ((!jsonData.profileId || parseInt(jsonData.profileId, 10) <= 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									" }"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"firstName\", jsonData['firstName']);",
+									"pm.collectionVariables.set(\"lastName\", jsonData['lastName']);",
+									"pm.collectionVariables.set(\"email\", jsonData['email']);",
+									"pm.collectionVariables.set(\"phone\", jsonData['phone']);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"{{$randomFirstName}}\",\n  \"lastName\": \"{{$randomLastName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phone\": \"{{$randomPhoneNumber}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Updated Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"var jsonData = pm.response.json();",
+									"if ((!jsonData.firstName || pm.collectionVariables.get('firstName') !== jsonData.firstName) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"    pm.test(\"Checking profile\", function () {",
+									"        pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username'));",
+									"        pm.expect(jsonData.firstName).to.eql(pm.collectionVariables.get('firstName'));",
+									"        pm.expect(jsonData.lastName).to.eql(pm.collectionVariables.get('lastName'));",
+									"        pm.expect(jsonData.email).to.eql(pm.collectionVariables.get('email'));",
+									"        pm.expect(jsonData.phone).to.eql(pm.collectionVariables.get('phone'));",
+									"    });",
+									" }"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Password Changing",
+			"item": [
+				{
+					"name": "Register Init",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password (unauthorized)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"oldPassword\": \"test\",\n  \"newPassword\": \"test2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/change-password",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"password\", jsonData['newPassword']);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"oldPassword\": \"{{password}}\",\n  \"newPassword\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/change-password",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login with new password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"}",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Profile Visibility",
+			"item": [
+				{
+					"name": "Register Init 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username1\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password1\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username1}}\",\n  \"password\": \"{{password1}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Checking profile\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username1'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Init 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username2\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password2\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username2}}\",\n  \"password\": \"{{password2}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Checking profile\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username2'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"me",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "username",
+			"value": ""
+		},
+		{
+			"key": "password",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "firstName",
+			"value": ""
+		},
+		{
+			"key": "lastName",
+			"value": ""
+		},
+		{
+			"key": "email",
+			"value": ""
+		},
+		{
+			"key": "phone",
+			"value": ""
+		},
+		{
+			"key": "username1",
+			"value": ""
+		},
+		{
+			"key": "password1",
+			"value": ""
+		},
+		{
+			"key": "username2",
+			"value": ""
+		},
+		{
+			"key": "password2",
+			"value": ""
+		}
+	]
+}

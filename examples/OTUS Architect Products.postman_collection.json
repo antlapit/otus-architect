@@ -1,0 +1,672 @@
+{
+	"info": {
+		"_postman_id": "0d214296-09d8-4bea-8488-6308d2b0ad8d",
+		"name": "OTUS Architect Products",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Categories management",
+			"item": [
+				{
+					"name": "Register Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init-admin",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init-admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"newCategoryName\", jsonData['name']);",
+									"pm.collectionVariables.set(\"newCategoryDescription\", jsonData['description']);",
+									"var resp = pm.response.json();",
+									"pm.collectionVariables.set(\"newCategoryId\", resp['categoryId']);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"{{$randomCatchPhraseNoun}}\",\n    \"description\": \"{{$randomCatchPhrase}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/categories",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Categories",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"for (cat of jsonData) {",
+									"    if (cat['categoryId'] === pm.collectionVariables.get(\"newCategoryId\")) {",
+									"        pm.expect(cat['name']).eq(pm.collectionVariables.get(\"newCategoryName\"));",
+									"        pm.expect(cat['description']).eq(pm.collectionVariables.get(\"newCategoryDescription\"));",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/categories",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Product management",
+			"item": [
+				{
+					"name": "Register Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"username\", jsonData['username']);",
+									"pm.collectionVariables.set(\"password\", jsonData['password']);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"password\": \"{{$randomPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/register/init-admin",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"register",
+								"init-admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"if ((pm.response.code != 200) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response['token']);",
+									"}",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{baseUrl}}/otusapp/alapitskii/login",
+							"protocol": "http",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = JSON.parse(pm.request.body.raw);",
+									"pm.collectionVariables.set(\"newProductName\", jsonData['name']);",
+									"pm.collectionVariables.set(\"newProductDescription\", jsonData['description']);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"{{$randomCatchPhraseNoun}}\",\n    \"description\": \"{{$randomCatchPhrase}}\",\n    \"categoryId\": [{{$randomInt}}, {{$randomInt}}, {{$randomInt}}]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/products",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products By Filter",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"var jsonData = pm.response.json();",
+									"if ((jsonData.items.length == 0 || jsonData.items[0]['name'] != pm.collectionVariables.get(\"newProductName\")) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    pm.expect(jsonData.items[0]['name']).eq(pm.collectionVariables.get(\"newProductName\"));",
+									"    pm.expect(jsonData.items[0]['description']).eq(pm.collectionVariables.get(\"newProductDescription\"));",
+									"    pm.collectionVariables.set(\"newProductId\", jsonData.items[0]['productId']);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nameInfix\": \"{{newProductName}}\",\n    \"descriptionInfix\": \"{{newProductDescription}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/products/find-by-filter",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"products",
+								"find-by-filter"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product By Id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.expect(jsonData['name']).eq(pm.collectionVariables.get(\"newProductName\"));",
+									"pm.expect(jsonData['description']).eq(pm.collectionVariables.get(\"newProductDescription\"));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/products/{{newProductId}}",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"products",
+								"{{newProductId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Modify Price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"basePrice\": \"{{$randomInt}}\",\n    \"additionalPrices\": {\n        \"5\": \"{{$randomInt}}\",\n        \"10\": \"{{$randomInt}}\" \n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/prices/by-product-id/{{newProductId}}",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"prices",
+								"by-product-id",
+								"{{newProductId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product By Id With Prices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var maxNumberOfTries = 3;",
+									"var sleepBetweenTries = 5000;",
+									"",
+									"if (!pm.environment.get(\"collection_tries\")) {",
+									"    pm.environment.set(\"collection_tries\", 1);",
+									"}",
+									"",
+									"var jsonData = pm.response.json();",
+									"if ((!jsonData['basePrice']) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+									"     pm.environment.set(\"collection_tries\", tries + 1);",
+									"     setTimeout(function() {}, sleepBetweenTries);",
+									"     postman.setNextRequest(request.name);",
+									" } else {",
+									"     pm.environment.unset(\"collection_tries\");",
+									"",
+									"     pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/products/{{newProductId}}",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"products",
+								"{{newProductId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "username",
+			"value": ""
+		},
+		{
+			"key": "password",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "newProductName",
+			"value": ""
+		},
+		{
+			"key": "newProductDescription",
+			"value": ""
+		},
+		{
+			"key": "newProductId",
+			"value": ""
+		},
+		{
+			"key": "newCategoryName",
+			"value": ""
+		},
+		{
+			"key": "newCategoryDescription",
+			"value": ""
+		},
+		{
+			"key": "newCategoryId",
+			"value": ""
+		}
+	]
+}

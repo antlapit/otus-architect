@@ -4,6 +4,7 @@ var AllEvents = merge(
 	BillingEvents,
 	UserEvents,
 	OrderEvents,
+	ProductEvents,
 )
 
 func merge(ms ...map[string]interface{}) map[string]interface{} {

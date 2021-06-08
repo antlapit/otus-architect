@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/antlapit/otus-architect/toolbox"
 	"math/big"
 	"strconv"
+	"time"
 )
 
 type OrderRepository struct {
@@ -16,7 +18,8 @@ type Order struct {
 	Id     int64      `json:"orderId"`
 	UserId int64      `json:"userId" binding:"required"`
 	Status string     `json:"status" binding:"required"`
-	Total  *big.Float `json:"total" binding:"required"`
+	Total  string     `json:"total" binding:"required"`
+	Date   *time.Time `json:"date" binding:"required"`
 }
 
 var DbFieldAdditionalMapping = map[string]string{
@@ -31,9 +34,9 @@ type OrderNotFoundError struct {
 
 func (error *OrderNotFoundError) Error() string {
 	if error.orderId > 0 {
-		return fmt.Sprintf("Счет на оплату для заказа с ИД %s не найден", strconv.FormatInt(error.orderId, 10))
+		return fmt.Sprintf("Заказ с ИД %s не найден", strconv.FormatInt(error.orderId, 10))
 	} else {
-		return fmt.Sprintf("Счет на оплату с ИД %s не найден", strconv.FormatInt(error.id, 10))
+		return fmt.Sprintf("Заказ с ИД %s не найден", strconv.FormatInt(error.id, 10))
 	}
 }
 
@@ -56,15 +59,17 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO orders(id, user_id, status, total) 
-				VALUES($1, $2, $3, $4)`,
+		`INSERT INTO orders(id, user_id, status, total, date) 
+				VALUES($1, $2, $3, $4, $5)
+				ON CONFLICT (id) DO UPDATE
+				SET user_id = $2, status = $3, total = $4`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, userId, StatusNew, total.String())
+	res, err := stmt.Exec(orderId, userId, StatusNew, total.String(), time.Now())
 	if err != nil {
 		return false, err
 	}
@@ -78,7 +83,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 
 func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, user_id, status, total FROM orders WHERE id = $1")
+	stmt, err := db.Prepare("SELECT id, user_id, status, total, date FROM orders WHERE id = $1")
 	if err != nil {
 		return Order{}, err
 	}
@@ -86,8 +91,8 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 
 	var order Order
 	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
-	order.Total = big.NewFloat(totalVal.Float64)
+	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
+	order.Total = big.NewFloat(totalVal.Float64).String()
 	if err != nil {
 		// constraints
 		return Order{}, &OrderNotFoundError{id: orderId}
@@ -96,10 +101,12 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 	return order, nil
 }
 
-func (repository *OrderRepository) GetByFilter(filter OrderFilter) ([]Order, error) {
+func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, error) {
 	db := repository.DB
 
-	query, values, err := prepareQuery(filter)
+	queryBuilder := prepareQuery([]string{"id", "user_id", "status", "total", "date"}, filter)
+	queryBuilder = toolbox.AddPaging(queryBuilder, filter.Paging, DbFieldAdditionalMapping)
+	query, values, err := queryBuilder.ToSql()
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -116,11 +123,11 @@ func (repository *OrderRepository) GetByFilter(filter OrderFilter) ([]Order, err
 		for rows.Next() {
 			var order Order
 			var totalVal sql.NullFloat64
-			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal)
+			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
 			if err != nil {
 				return []Order{}, err
 			}
-			order.Total = big.NewFloat(totalVal.Float64)
+			order.Total = big.NewFloat(totalVal.Float64).String()
 			result = append(result, order)
 		}
 		return result, nil
@@ -204,7 +211,28 @@ func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) 
 	}
 }
 
-func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
+func (repository *OrderRepository) CountByFilter(filter *OrderFilter) (uint64, error) {
+	db := repository.DB
+
+	queryBuilder := prepareQuery([]string{"count(1)"}, filter)
+	query, values, err := queryBuilder.ToSql()
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var count uint64
+	err = stmt.QueryRow(values...).Scan(&count)
+	if err != nil {
+		return 0, err
+	} else {
+		return count, nil
+	}
+}
+
+func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	predicate := sq.And{}
@@ -224,25 +252,8 @@ func prepareQuery(filter OrderFilter) (string, []interface{}, error) {
 		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
 	}
 
-	qBuilder := psql.Select("id", "user_id", "status", "total").From("orders").
+	qBuilder := psql.Select(columns...).From("orders").
 		Where(predicate)
 
-	if filter.Paging != nil {
-		qBuilder = qBuilder.Limit(filter.Paging.PageSize).
-			Offset(filter.Paging.PageSize * filter.Paging.PageNumber)
-
-		if len(filter.Paging.Sort) > 0 {
-			var orderBy []string
-			for _, sort := range filter.Paging.Sort {
-				var mappedName = DbFieldAdditionalMapping[sort.Property]
-				if mappedName == "" {
-					orderBy = append(orderBy, sort.Property+" "+sort.Direction())
-				} else {
-					orderBy = append(orderBy, mappedName+" "+sort.Direction())
-				}
-			}
-			qBuilder = qBuilder.OrderBy(orderBy...)
-		}
-	}
-	return qBuilder.ToSql()
+	return qBuilder
 }

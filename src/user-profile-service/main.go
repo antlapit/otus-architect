@@ -18,7 +18,7 @@ func main() {
 	if serviceMode == "INIT" {
 		MigrateDb(driver, dbConfig)
 	} else {
-		engine, _, secureGroup, _ := InitGinDefault(dbConfig)
+		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
 		kafka := InitKafkaDefault()
 		userEventsMarshaller := NewEventMarshaller(event.AllEvents)
@@ -39,8 +39,8 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Us
 }
 
 func initUsersApi(secureGroup *gin.RouterGroup, app *core.UserApplication) {
-	singleUserRoute := secureGroup.Group("/profiles/by-user-id/:id")
-	singleUserRoute.Use(userIdExtractor, checkUserPermissions, errorHandler, ResponseSerializer)
+	singleUserRoute := secureGroup.Group("/profiles/by-user-id/:userId")
+	singleUserRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
 	singleUserRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 		user, err := app.GetByUserId(userId)
@@ -62,17 +62,6 @@ func checkUserPermissions(context *gin.Context) {
 	if userId != tokenUserId {
 		AbortErrorResponseWithMessage(context, http.StatusForbidden, "not permitted", "FA03")
 	}
-
-	context.Next()
-}
-
-// Извлечение ИД пользователя из URL
-func userIdExtractor(context *gin.Context) {
-	id, err := GetPathInt64(context, "id")
-	if err != nil {
-		AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
-	}
-	context.Set("userId", id)
 
 	context.Next()
 }

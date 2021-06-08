@@ -581,8 +581,8 @@
       ]
     },
     {
-      "endpoint": "/admin/orders",
-      "method": "GET",
+      "endpoint": "/admin/orders/find-by-filter",
+      "method": "POST",
       "output_encoding": "no-op",
       "headers_to_pass": [
         "*"
@@ -596,7 +596,7 @@
             "http://order-service:8003"
           ],
           "encoding": "no-op",
-          "url_pattern": "/orders"
+          "url_pattern": "/orders/find-by-filter"
         }
       ],
       "extra_config": {
@@ -613,6 +613,243 @@
           "roles_key": "auth_role"
         }
       }
+    },
+    {
+      "endpoint": "/admin/categories",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/categories"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
+      "endpoint": "/categories",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/categories"
+        }
+      ]
+    },
+    {
+      "endpoint": "/admin/products",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/products"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
+      "endpoint": "/admin/products/{productId}",
+      "method": "PUT",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/products/{productId}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
+      "endpoint": "/admin/products/{productId}/archive",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/products/{productId}/archive"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
+      "endpoint": "/products/{productId}",
+      "method": "GET",
+      "output_encoding": "json",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-service:8005"
+          ],
+          "encoding": "json",
+          "url_pattern": "/products/{productId}"
+        },
+        {
+          "host": [
+            "http://price-service:8006"
+          ],
+          "encoding": "json",
+          "url_pattern": "/prices/by-product-id/{productId}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/admin/prices/by-product-id/{productId}",
+      "method": "PUT",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://price-service:8006"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/prices/by-product-id/{productId}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
+      "endpoint": "/products/find-by-filter",
+      "method": "POST",
+      "output_encoding": "json",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://product-search-service:8007"
+          ],
+          "encoding": "json",
+          "url_pattern": "/products/find-by-filter"
+        }
+      ]
     }
   ]
 }

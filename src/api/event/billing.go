@@ -1,7 +1,5 @@
 package event
 
-import "math/big"
-
 const (
 	TOPIC_BILLING           = "billing.events"
 	EVENT_MONEY_ADDED       = "billing.moneyadded"
@@ -16,8 +14,8 @@ var BillingEvents = map[string]interface{}{
 }
 
 type MoneyAdded struct {
-	UserId     int64      `json:"userId" binding:"required"`
-	MoneyAdded *big.Float `json:"moneyAdded" binding:"required"`
+	UserId     int64  `json:"userId" binding:"required"`
+	MoneyAdded string `json:"moneyAdded" binding:"required"`
 }
 
 type PaymentConfirmed struct {

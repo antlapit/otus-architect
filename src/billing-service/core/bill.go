@@ -8,11 +8,11 @@ import (
 )
 
 type Bill struct {
-	Id        int64      `json:"billId"`
-	AccountId int64      `json:"accountId" binding:"required"`
-	OrderId   int64      `json:"orderId" binding:"required"`
-	Status    string     `json:"status" binding:"required"`
-	Total     *big.Float `json:"total" binding:"required"`
+	Id        int64  `json:"billId"`
+	AccountId int64  `json:"accountId" binding:"required"`
+	OrderId   int64  `json:"orderId" binding:"required"`
+	Status    string `json:"status" binding:"required"`
+	Total     string `json:"total" binding:"required"`
 }
 
 type BillNotFoundError struct {
@@ -40,7 +40,7 @@ type BillRepository struct {
 	DB *sql.DB
 }
 
-func (repository *BillRepository) CreateIfNotExists(accountId int64, orderId int64, total *big.Float) (bool, error) {
+func (repository *BillRepository) CreateIfNotExists(accountId int64, orderId int64, total string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
@@ -53,7 +53,7 @@ func (repository *BillRepository) CreateIfNotExists(accountId int64, orderId int
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(accountId, orderId, total.String())
+	res, err := stmt.Exec(accountId, orderId, total)
 	if err != nil {
 		return false, err
 	}
@@ -76,7 +76,7 @@ func (repository *BillRepository) GetById(billId int64) (Bill, error) {
 	var bill Bill
 	var totalVal sql.NullFloat64
 	err = stmt.QueryRow(billId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-	bill.Total = big.NewFloat(totalVal.Float64)
+	bill.Total = big.NewFloat(totalVal.Float64).String()
 	if err != nil {
 		// constraints
 		return Bill{}, &BillNotFoundError{id: billId}
@@ -96,7 +96,7 @@ func (repository *BillRepository) GetByOrderId(orderId int64) (Bill, error) {
 	var bill Bill
 	var totalVal sql.NullFloat64
 	err = stmt.QueryRow(orderId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-	bill.Total = big.NewFloat(totalVal.Float64)
+	bill.Total = big.NewFloat(totalVal.Float64).String()
 	if err != nil {
 		// constraints
 		return Bill{}, &BillNotFoundError{orderId: orderId}
@@ -126,7 +126,7 @@ func (repository *BillRepository) GetByUserId(orderId int64) ([]Bill, error) {
 			var bill Bill
 			var totalVal sql.NullFloat64
 			rows.Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-			bill.Total = big.NewFloat(totalVal.Float64)
+			bill.Total = big.NewFloat(totalVal.Float64).String()
 			result = append(result, bill)
 		}
 		return result, nil

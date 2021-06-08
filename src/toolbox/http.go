@@ -11,17 +11,15 @@ import (
 	"strings"
 )
 
-func InitGinDefault(dbConfig *DatabaseConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
-	return InitGin(LoadAuthConfig(), dbConfig)
+func InitGinDefault(dbConfig *DatabaseConfig, mongoConfig *MongoConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
+	return InitGin(LoadAuthConfig(), dbConfig, mongoConfig)
 }
 
-func InitGin(authConfig *AuthConfig, dbConfig *DatabaseConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
+func InitGin(authConfig *AuthConfig, dbConfig *DatabaseConfig, mongoConfig *MongoConfig) (*gin.Engine, *jwt.GinJWTMiddleware, *gin.RouterGroup, *gin.RouterGroup) {
 	engine := gin.Default()
-	engine.Use(gin.Logger())
-	engine.Use(gin.Recovery())
 
 	// Tech Resources without authentication
-	initTechResources(engine, dbConfig)
+	initTechResources(engine, dbConfig, mongoConfig)
 
 	authMiddleware := InitAuthMiddleware(authConfig)
 	secureGroup := engine.Group("/")
@@ -155,5 +153,18 @@ func GetSort(context *gin.Context, key string) []Order {
 		return out
 	} else {
 		return []Order{}
+	}
+}
+
+// Извлечение ИД из URL-а
+func GenericIdExtractor(parameterName string) func(context *gin.Context) {
+	return func(context *gin.Context) {
+		id, err := GetPathInt64(context, parameterName)
+		if err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+		}
+		context.Set(parameterName, id)
+
+		context.Next()
 	}
 }
