@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/antlapit/otus-architect/api/event"
-	"github.com/antlapit/otus-architect/product-search-service/core"
+	"github.com/antlapit/otus-architect/delivery-service/core"
 	. "github.com/antlapit/otus-architect/toolbox"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -23,27 +23,26 @@ func main() {
 
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var app = core.NewProductSearchApplication(db)
+		var app = core.NewDeliveryApplication(db)
 		initListeners(kafka, eventsMarshaller, app)
 		initApi(publicGroup, app)
-		engine.Run(":8007")
+		engine.Run(":8008")
 	}
 }
 
-func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.ProductSearchApplication) {
-	f := func(id string, eventType string, data interface{}) error {
+func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.DeliveryApplication) {
+	_ = func(id string, eventType string, data interface{}) error {
 		return app.ProcessEvent(id, eventType, data)
 	}
-	kafka.StartNewEventReader(event.TOPIC_PRODUCTS, "product-search-service", marshaller, f)
-	kafka.StartNewEventReader(event.TOPIC_WAREHOUSE, "product-search-service", marshaller, f)
+	//kafka.StartNewEventReader(event.TOPIC_ORDERS, "delivery-service", marshaller, f)
 }
 
-func initApi(publicGroup *gin.RouterGroup, app *core.ProductSearchApplication) {
+func initApi(publicGroup *gin.RouterGroup, app *core.DeliveryApplication) {
 	publicGroup.Use(errorHandler)
 	productsRoute := publicGroup.Group("/products")
 	productsRoute.Use(ResponseSerializer)
 
-	productsRoute.POST("/find-by-filter", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	/*productsRoute.POST("/find-by-filter", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		var filters core.ProductFilters
 		if err := context.ShouldBindJSON(&filters); err != nil {
 			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
@@ -52,7 +51,7 @@ func initApi(publicGroup *gin.RouterGroup, app *core.ProductSearchApplication) {
 
 		res, err := app.GetAllProducts(&filters)
 		return res, err, false
-	}))
+	}))*/
 }
 
 func errorHandler(context *gin.Context) {

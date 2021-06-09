@@ -17,15 +17,16 @@ type KafkaServer struct {
 	broker *KafkaEnvironmentConfig
 }
 
-type MessageHandler func(string, string)
+type MessageHandler func(string, string) error
 
 func (this *KafkaServer) StartNewEventReader(topic string, consumerGroup string, marshaller *EventMarshaller, handler EventHandler) {
-	go this.startNewReader(topic, consumerGroup, func(key string, value string) {
+	go this.startNewReader(topic, consumerGroup, func(key string, value string) error {
 		id, t, data, err := marshaller.UnmarshallToType(value)
 		if err != nil {
 			fmt.Printf("Error processing eventId=%s, eventType=%s, err = %s", id, t, err)
+			return err
 		}
-		handler(id, t, data)
+		return handler(id, t, data)
 	})
 }
 
@@ -43,13 +44,16 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 	log.Printf("Kafka broker (address %s)(topic %s)(consumer group %s) started", address, topic, consumerGroup)
 
 	for {
-		m, err := r.ReadMessage(context.Background())
+		m, err := r.FetchMessage(context.Background())
 		if err != nil {
 			break
 		}
 		key, value := string(m.Key), string(m.Value)
 		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, key, value)
-		handler(key, value)
+		err = handler(key, value)
+		if err == nil {
+			r.CommitMessages(context.Background(), m)
+		}
 	}
 
 	if err := r.Close(); err != nil {

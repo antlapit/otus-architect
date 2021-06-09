@@ -1,6 +1,7 @@
 package toolbox
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -82,4 +83,11 @@ func NumericPlaceholdersWithSuffix(startNum int, count int, suffix string) strin
 	}
 
 	return builder.String()
+}
+
+func Rollback(tx *sql.Tx, err error) error {
+	if rbErr := tx.Rollback(); rbErr != nil {
+		return fmt.Errorf("tx err: %v, rb err: %v", err, rbErr)
+	}
+	return nil
 }

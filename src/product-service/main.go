@@ -28,8 +28,8 @@ func main() {
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.ProductApplication) {
-	f := func(id string, eventType string, data interface{}) {
-		app.ProcessEvent(id, eventType, data)
+	f := func(id string, eventType string, data interface{}) error {
+		return app.ProcessEvent(id, eventType, data)
 	}
 	kafka.StartNewEventReader(event.TOPIC_PRODUCTS, "product-service", marshaller, f)
 }

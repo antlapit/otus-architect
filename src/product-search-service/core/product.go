@@ -179,6 +179,12 @@ func prepareQuery(columns []string, filter *ProductFilters) sq.SelectBuilder {
 	if filter.MaxPrice != nil {
 		predicate = append(predicate, sq.LtOrEq{"min_price": filter.MaxPrice.String()})
 	}
+	if filter.MinQuantity > 0 {
+		predicate = append(predicate, sq.GtOrEq{"quantity": filter.MinQuantity})
+	}
+	if filter.MaxQuantity > 0 {
+		predicate = append(predicate, sq.LtOrEq{"quantity": filter.MaxQuantity})
+	}
 
 	qBuilder := psql.Select(columns...).From("products").
 		Where(predicate)
@@ -222,5 +228,36 @@ func (repository *ProductSearchRepository) UpdatePrice(productId int64, minPrice
 	} else {
 		return true, nil
 	}
-	return false, nil
+}
+
+func (repository *ProductSearchRepository) UpdateQuantities(productId int64, quantity int64, increased bool) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE products
+				SET quantity = quantity + $1
+				WHERE id = $2`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	if increased {
+		res, err = stmt.Exec(quantity, productId)
+	} else {
+		res, err = stmt.Exec(-quantity, productId)
+	}
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &ProductInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &ProductNotFoundError{id: productId}
+	} else {
+		return true, nil
+	}
 }

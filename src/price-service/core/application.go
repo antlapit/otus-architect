@@ -25,15 +25,15 @@ func NewPriceApplication(mongo *toolbox.MongoWrapper, productEventWriter *toolbo
 	}
 }
 
-func (app *PriceApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *PriceApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.ProductPriceChanged:
-		app.createOrUpdatePrices(data.(event.ProductPriceChanged))
-		break
+		return app.createOrUpdatePrices(data.(event.ProductPriceChanged))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
 func (app *PriceApplication) SubmitProductPriceChanged(productId int64, data ProductPricesData) (interface{}, error) {
@@ -44,7 +44,7 @@ func (app *PriceApplication) SubmitProductPriceChanged(productId int64, data Pro
 	})
 }
 
-func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged) {
+func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged) error {
 	productId := data.ProductId
 	additionalAttributes := []Price{}
 	if data.AdditionalPrices != nil {
@@ -57,13 +57,14 @@ func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged
 		}
 	}
 
-	app.priceRepository.SavePrices(productId,
+	_, err := app.priceRepository.SavePrices(productId,
 		Price{
 			Quantity: 1,
 			Value:    data.BasePrice.String(),
 		},
 		additionalAttributes,
 	)
+	return err
 }
 
 func (app *PriceApplication) GetProductPrices(productId int64) (ProductPrices, error) {

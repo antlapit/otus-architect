@@ -19,24 +19,24 @@ func NewProductSearchApplication(db *sql.DB) *ProductSearchApplication {
 		productSearchRepository: productSearchRepository,
 	}
 }
-func (app *ProductSearchApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *ProductSearchApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.ProductChanged:
-		app.createOrUpdateProduct(data.(event.ProductChanged))
-		break
+		return app.createOrUpdateProduct(data.(event.ProductChanged))
 	case event.ProductArchived:
-		app.archiveProduct(data.(event.ProductArchived))
-		break
+		return app.archiveProduct(data.(event.ProductArchived))
 	case event.ProductPriceChanged:
-		app.modifyPrices(data.(event.ProductPriceChanged))
-		break
+		return app.modifyPrices(data.(event.ProductPriceChanged))
+	case event.ProductsBatchQuantityChanged:
+		return app.modifyQuantities(data.(event.ProductsBatchQuantityChanged))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (app *ProductSearchApplication) createOrUpdateProduct(data event.ProductChanged) {
+func (app *ProductSearchApplication) createOrUpdateProduct(data event.ProductChanged) error {
 	var wrappedArray []int64
 	if data.CategoryId != nil {
 		wrappedArray = data.CategoryId
@@ -44,16 +44,16 @@ func (app *ProductSearchApplication) createOrUpdateProduct(data event.ProductCha
 	success, err := app.productSearchRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description, wrappedArray)
 	if err != nil || !success {
 		log.Error("Error creating product")
-		return
 	}
+	return err
 }
 
-func (app *ProductSearchApplication) archiveProduct(data event.ProductArchived) {
+func (app *ProductSearchApplication) archiveProduct(data event.ProductArchived) error {
 	success, err := app.productSearchRepository.Delete(data.ProductId)
 	if err != nil || !success {
 		log.Error("Error deleting product")
-		return
 	}
+	return err
 }
 
 func (app *ProductSearchApplication) GetAllProducts(filters *ProductFilters) (ProductPage, error) {
@@ -83,7 +83,7 @@ func (app *ProductSearchApplication) GetAllProducts(filters *ProductFilters) (Pr
 	}, nil
 }
 
-func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged) {
+func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged) error {
 	var minPrice = data.BasePrice
 	var maxPrice = data.BasePrice
 	for _, price := range data.AdditionalPrices {
@@ -94,7 +94,18 @@ func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged
 			maxPrice = price
 		}
 	}
-	app.productSearchRepository.UpdatePrice(data.ProductId, minPrice, maxPrice)
+	_, err := app.productSearchRepository.UpdatePrice(data.ProductId, minPrice, maxPrice)
+	return err
+}
+
+func (app *ProductSearchApplication) modifyQuantities(data event.ProductsBatchQuantityChanged) error {
+	for _, change := range data.Changes {
+		_, err := app.productSearchRepository.UpdateQuantities(change.ProductId, change.Quantity, change.Increase)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type ProductFilters struct {
@@ -105,6 +116,8 @@ type ProductFilters struct {
 	CategoryId       []int64    `json:"categoryId"`
 	MinPrice         *big.Float `json:"minPrice"`
 	MaxPrice         *big.Float `json:"maxPrice"`
+	MinQuantity      int64      `json:"minQuantity"`
+	MaxQuantity      int64      `json:"maxQuantity"`
 }
 
 type ProductPage struct {

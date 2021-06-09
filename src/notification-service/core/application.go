@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
-	"github.com/prometheus/common/log"
 )
 
 type NotificationApplication struct {
@@ -19,33 +18,25 @@ func NewNotificationApplication(db *sql.DB) *NotificationApplication {
 	}
 }
 
-func (app *NotificationApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *NotificationApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.OrderConfirmed:
 		castedData := data.(event.OrderConfirmed)
 		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		break
+		return err
 	case event.OrderCompleted:
 		castedData := data.(event.OrderCompleted)
 		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		break
+		return err
 	case event.OrderRejected:
 		castedData := data.(event.OrderRejected)
 		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		break
+		return err
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
 func (app *NotificationApplication) GetAllNotificationsByUserId(id int64) ([]Notification, error) {

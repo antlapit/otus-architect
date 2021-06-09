@@ -34,6 +34,7 @@ type OrderConfirmed struct {
 type OrderRejected struct {
 	OrderId int64 `json:"orderId" binding:"required"`
 	UserId  int64 `json:"userId" binding:"required"`
+	Items   []OrderItem
 }
 
 type OrderCompleted struct {

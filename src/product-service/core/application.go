@@ -26,21 +26,20 @@ func NewProductApplication(mongo *toolbox.MongoWrapper, productEventWriter *tool
 		productEventWriter: productEventWriter,
 	}
 }
-func (app *ProductApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *ProductApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.ProductChanged:
-		app.createOrUpdateProduct(data.(event.ProductChanged))
-		break
+		return app.createOrUpdateProduct(data.(event.ProductChanged))
 	case event.ProductArchived:
-		app.archiveProduct(data.(event.ProductArchived))
-		break
+		return app.archiveProduct(data.(event.ProductArchived))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) {
+func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) error {
 	var wrappedArray []int64
 	if data.CategoryId != nil {
 		wrappedArray = data.CategoryId
@@ -48,16 +47,16 @@ func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) 
 	success, err := app.productRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description, wrappedArray)
 	if err != nil || !success {
 		log.Error("Error creating product")
-		return
 	}
+	return err
 }
 
-func (app *ProductApplication) archiveProduct(data event.ProductArchived) {
+func (app *ProductApplication) archiveProduct(data event.ProductArchived) error {
 	success, err := app.productRepository.ChangeArchived(data.ProductId, true)
 	if err != nil || !success {
 		log.Error("Error archiving product")
-		return
 	}
+	return err
 }
 
 func (app *ProductApplication) SubmitProductCreation(data ProductData) (interface{}, error) {

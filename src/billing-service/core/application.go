@@ -26,62 +26,66 @@ func NewBillingApplication(db *sql.DB, billingEventWriter *toolbox.EventWriter) 
 	}
 }
 
-func (c *BillingApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (c *BillingApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.UserCreated:
-		c.createEmptyAccount(data.(event.UserCreated))
-		break
+		return c.createEmptyAccount(data.(event.UserCreated))
 	case event.MoneyAdded:
-		c.addMoney(data.(event.MoneyAdded))
-		break
+		return c.addMoney(data.(event.MoneyAdded))
 	case event.PaymentConfirmed:
-		c.confirmPayment(data.(event.PaymentConfirmed))
-		break
+		return c.confirmPayment(data.(event.PaymentConfirmed))
 	case event.PaymentCompleted:
-		c.completePayment(data.(event.PaymentCompleted))
-		break
+		return c.completePayment(data.(event.PaymentCompleted))
 	case event.OrderConfirmed:
-		c.createBillForOrder(data.(event.OrderConfirmed))
-		break
+		return c.createBillForOrder(data.(event.OrderConfirmed))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (c *BillingApplication) createEmptyAccount(data event.UserCreated) {
-	c.accountRepository.CreateIfNotExists(data.UserId)
+func (c *BillingApplication) createEmptyAccount(data event.UserCreated) error {
+	_, err := c.accountRepository.CreateIfNotExists(data.UserId)
+	return err
 }
 
-func (c *BillingApplication) addMoney(data event.MoneyAdded) {
-	c.accountRepository.AddMoneyByUserId(data.UserId, data.MoneyAdded)
+func (c *BillingApplication) addMoney(data event.MoneyAdded) error {
+	_, err := c.accountRepository.AddMoneyByUserId(data.UserId, data.MoneyAdded)
+	return err
 }
 
-func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
+func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) error {
 	bill, err := c.billRepository.GetById(data.BillId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 	if bill.Status != "CREATED" {
-		return
+		return nil
 	}
 	billTotal, _ := new(big.Float).SetString(bill.Total)
 	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(billTotal))
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 	if !res {
 		log.Error("Not enough money or something happened")
-		return
+		return &AccountInvalidError{
+			message: "Not enough money or something happened",
+		}
 	}
 	res, err = c.billRepository.Confirm(bill.Id)
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
 	if !res {
 		log.Error("Cannot confirm payment")
+		return &AccountInvalidError{
+			message: "Cannot confirm payment",
+		}
 	}
 	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_COMPLETED, event.PaymentCompleted{
 		BillId:    bill.Id,
@@ -93,16 +97,17 @@ func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
 	} else {
 		log.Info("Submitted payment completed event %s", eventId)
 	}
+	return err
 }
 
-func (c *BillingApplication) completePayment(data event.PaymentCompleted) {
+func (c *BillingApplication) completePayment(data event.PaymentCompleted) error {
 	bill, err := c.billRepository.GetById(data.BillId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 	if bill.Status != "CONFIRMED" {
-		return
+		return nil
 	}
 	res, err := c.billRepository.Complete(bill.Id)
 	if err != nil {
@@ -110,7 +115,11 @@ func (c *BillingApplication) completePayment(data event.PaymentCompleted) {
 	}
 	if !res {
 		log.Error("Cannot complete payment")
+		return &AccountInvalidError{
+			message: "Cannot complete payment",
+		}
 	}
+	return err
 }
 
 func (c *BillingApplication) GetAccount(userId int64) (Account, error) {
@@ -167,16 +176,16 @@ func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billI
 	}
 }
 
-func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
+func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) error {
 	account, err := c.accountRepository.GetByUserId(data.UserId)
 	if err != nil {
 		log.Error("Error creating order")
-		return
+		return &AccountInvalidError{
+			message: "Error creating order",
+		}
 	}
 	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Total)
-	if err != nil {
-		log.Error(err.Error())
-	}
+	return err
 }
 
 type AddMoneyRequest struct {

@@ -89,9 +89,15 @@ func (c *OrderApplication) SubmitOrderReject(userId int64, orderId int64) (inter
 		return Order{}, err
 	}
 
+	eventItems, err := c.getConvertedOrderItems(orderId)
+	if err != nil {
+		return Order{}, err
+	}
+
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_REJECTED, event.OrderRejected{
 		OrderId: order.Id,
 		UserId:  order.UserId,
+		Items:   eventItems,
 	})
 }
 
@@ -101,11 +107,34 @@ func (c *OrderApplication) SubmitOrderConfirm(userId int64, orderId int64) (inte
 		return Order{}, err
 	}
 
+	eventItems, err := c.getConvertedOrderItems(orderId)
+	if err != nil {
+		return Order{}, err
+	}
+
 	return c.orderEventWriter.WriteEvent(event.EVENT_ORDER_CONFIRMED, event.OrderConfirmed{
 		OrderId: order.Id,
 		UserId:  order.UserId,
 		Total:   order.Total,
+		Items:   eventItems,
 	})
+}
+
+func (c *OrderApplication) getConvertedOrderItems(orderId int64) ([]event.OrderItem, error) {
+	items, err := c.itemRepository.GetAllItems(orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	eventItems := []event.OrderItem{}
+	for _, item := range items {
+		eventItems = append(eventItems, event.OrderItem{
+			ProductId: item.ProductId,
+			Quantity:  item.Quantity,
+		})
+	}
+	return eventItems, nil
+
 }
 
 func (c *OrderApplication) SubmitOrderAddItem(userId int64, orderId int64, productId int64, quantity int64) (interface{}, error) {
@@ -144,114 +173,135 @@ func (c *OrderApplication) SubmitOrderRemoveItem(userId int64, orderId int64, pr
 	})
 }
 
-func (c *OrderApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (c *OrderApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.OrderCreated:
-		c.createOrder(data.(event.OrderCreated))
-		break
+		return c.createOrder(data.(event.OrderCreated))
 	case event.PaymentCompleted:
-		c.completeOrder(data.(event.PaymentCompleted))
-		break
+		return c.completeOrder(data.(event.PaymentCompleted))
 	case event.OrderConfirmed:
-		c.confirmOrder(data.(event.OrderConfirmed))
-		break
+		return c.confirmOrder(data.(event.OrderConfirmed))
 	case event.OrderRejected:
-		c.rejectOrder(data.(event.OrderRejected))
-		break
+		return c.rejectOrder(data.(event.OrderRejected))
 	case event.OrderItemsAdded:
-		c.addOrderItems(data.(event.OrderItemsAdded))
-		break
+		return c.addOrderItems(data.(event.OrderItemsAdded))
 	case event.OrderItemsRemoved:
-		c.removeOrderItems(data.(event.OrderItemsRemoved))
-		break
+		return c.removeOrderItems(data.(event.OrderItemsRemoved))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (c *OrderApplication) createOrder(data event.OrderCreated) {
+func (c *OrderApplication) createOrder(data event.OrderCreated) error {
 	success, err := c.orderRepository.Create(data.UserId, data.OrderId, new(big.Float))
 	if err != nil || !success {
 		log.Error("Error creating order")
-		return
 	}
+	return err
 }
 
-func (c *OrderApplication) completeOrder(data event.PaymentCompleted) {
+func (c *OrderApplication) completeOrder(data event.PaymentCompleted) error {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 
 	if order.Status != StatusConfirmed {
-		return
+		return nil
+	}
+
+	eventItems, err := c.getConvertedOrderItems(data.OrderId)
+	if err != nil {
+		return err
 	}
 
 	_, err = c.orderEventWriter.WriteEvent(event.EVENT_ORDER_COMPLETED, event.OrderCompleted{
 		OrderId: order.Id,
 		UserId:  order.UserId,
 		Total:   order.Total,
+		Items:   eventItems,
 	})
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
 
 	res, err := c.orderRepository.Complete(order.Id)
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
 	if !res {
 		log.Error("Cannot complete order")
+		return &OrderInvalidError{
+			message: "Cannot complete order",
+		}
 	}
+	return nil
 }
 
-func (c *OrderApplication) confirmOrder(data event.OrderConfirmed) {
+func (c *OrderApplication) confirmOrder(data event.OrderConfirmed) error {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 	if order.Status != StatusNew {
-		return
+		return &OrderInvalidError{
+			message: "Status is not new",
+		}
 	}
 	res, err := c.orderRepository.Confirm(order.Id)
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
 	if !res {
 		log.Error("Cannot confirm order")
+		return &OrderInvalidError{
+			message: "Cannot confirm order",
+		}
 	}
+	return nil
 }
 
-func (c *OrderApplication) rejectOrder(data event.OrderRejected) {
+func (c *OrderApplication) rejectOrder(data event.OrderRejected) error {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 	if order.Status != StatusNew {
-		return
+		return nil
 	}
 	res, err := c.orderRepository.Reject(order.Id)
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
 	if !res {
 		log.Error("Cannot reject order")
+		return &OrderInvalidError{
+			message: "Cannot reject order",
+		}
 	}
+	return nil
 }
 
-func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) {
+func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) error {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 
 	if order.Status != StatusNew {
-		return
+		return &OrderInvalidError{
+			message: "Order is not new",
+		}
 	}
 
 	total := new(big.Float)
@@ -259,38 +309,45 @@ func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) {
 		_, err = c.itemRepository.AddItems(order.Id, item.ProductId, item.Quantity)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
 		orderItem, err := c.itemRepository.GetItem(order.Id, item.ProductId)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
 
 		basePrice, calcPrice, itemTotal, err := c.priceService.GetPrice(item.ProductId, orderItem.Quantity)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
-		c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		_, err = c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
 		total = total.Add(total, itemTotal)
 	}
 	_, err = c.orderRepository.ModifyTotal(order.Id, total)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
+	return err
 }
 
-func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
+func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) error {
 	order, err := c.orderRepository.GetById(data.OrderId)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
 
 	if order.Status != StatusNew {
-		return
+		return &OrderInvalidError{
+			message: "Order is not new",
+		}
 	}
 
 	total := new(big.Float)
@@ -298,27 +355,32 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) {
 		_, err = c.itemRepository.RemoveItems(order.Id, item.ProductId, item.Quantity)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
 		orderItem, err := c.itemRepository.GetItem(order.Id, item.ProductId)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
 
 		basePrice, calcPrice, itemTotal, err := c.priceService.GetPrice(item.ProductId, orderItem.Quantity)
 		if err != nil {
 			log.Error(err.Error())
-			return
+			return err
 		}
-		c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		_, err = c.itemRepository.ModifyPrices(order.Id, item.ProductId, basePrice, calcPrice, itemTotal)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
 		total = total.Add(total, itemTotal)
 	}
 	_, err = c.orderRepository.ModifyTotal(order.Id, total)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return err
 	}
+	return nil
 }
 
 type OrderFilter struct {
