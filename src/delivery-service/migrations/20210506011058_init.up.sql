@@ -14,3 +14,11 @@ create table processed_orders
         constraint processed_orders_pk
             primary key
 );
+
+create table courier
+(
+    courier_id  serial  not null
+        constraint courier_pk
+            primary key,
+    max_per_day numeric not null default 1
+)

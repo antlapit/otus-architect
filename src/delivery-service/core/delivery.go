@@ -95,7 +95,7 @@ func (repository *DeliveryRepository) GetByOrderIdInTransaction(tx *sql.Tx, orde
 }
 
 func (repository *DeliveryRepository) reserveCourier(tx *sql.Tx, orderId int64) error {
-	stmt, err := tx.Prepare(
+	stmt1, err := tx.Prepare(
 		`INSERT INTO processed_orders(order_id) 
 				VALUES($1)
 				ON CONFLICT (order_id) DO NOTHING`,
@@ -103,9 +103,8 @@ func (repository *DeliveryRepository) reserveCourier(tx *sql.Tx, orderId int64) 
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
-
-	res, err := stmt.Exec(orderId)
+	defer stmt1.Close()
+	res, err := stmt1.Exec(orderId)
 	if err != nil {
 		return err
 	}
@@ -117,26 +116,22 @@ func (repository *DeliveryRepository) reserveCourier(tx *sql.Tx, orderId int64) 
 		return nil
 	}
 
-	stmt, err = tx.Prepare(
-		`UPDATE delivery
-				SET courier_id = $1
-				WHERE order_id = $2`,
-	)
+	delivery, err := repository.GetByOrderIdInTransaction(tx, orderId)
+	if err != nil {
+		switch err.(type) {
+		case *DeliveryNotFoundError:
+			// no delivery -> return
+			return nil
+		}
+		return err
+	}
+
+	courierId, err := repository.getFreeCourierOnDate(tx, delivery.Date)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
-	res, err = stmt.Exec(1, orderId) // TODO random
-	if err != nil {
-		return err
-	}
-	affectedRows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	} else if affectedRows == 0 {
-		return nil // no delivery
-	}
-	return nil
+
+	return repository.updateCourier(tx, orderId, courierId)
 }
 
 func (repository *DeliveryRepository) freeCourier(tx *sql.Tx, orderId int64) error {
@@ -161,26 +156,7 @@ func (repository *DeliveryRepository) freeCourier(tx *sql.Tx, orderId int64) err
 		return nil
 	}
 
-	stmt, err = tx.Prepare(
-		`UPDATE delivery
-				SET courier_id = NULL
-				WHERE order_id = $1`,
-	)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	res, err = stmt.Exec(orderId)
-	if err != nil {
-		return err
-	}
-	affectedRows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	} else if affectedRows == 0 {
-		return nil // no delivery
-	}
-	return nil
+	return repository.updateCourier(tx, orderId, -1)
 }
 
 func (repository *DeliveryRepository) HasProcessedOrders(orderId int64) bool {
@@ -200,4 +176,68 @@ func (repository *DeliveryRepository) HasProcessedOrders(orderId int64) bool {
 	} else {
 		return count > 0
 	}
+}
+
+func (repository *DeliveryRepository) updateCourier(tx *sql.Tx, orderId int64, courierId int64) error {
+	var err error
+	stmt, err := tx.Prepare(
+		`UPDATE delivery
+				SET courier_id = $1
+				WHERE order_id = $2`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	if courierId > 0 {
+		res, err = stmt.Exec(courierId, orderId)
+	} else {
+		res, err = stmt.Exec(nil, orderId)
+	}
+	if err != nil {
+		return err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	} else if affectedRows == 0 {
+		return nil // no delivery
+	}
+	return nil
+}
+
+func (repository *DeliveryRepository) getFreeCourierOnDate(tx *sql.Tx, date *time.Time) (int64, error) {
+	q := `
+		WITH reserved_couriers as (
+			SELECT d.courier_id, count(1) as orders
+			FROM delivery d
+			WHERE date_part('day', d.date) = date_part('day', $1)
+			  AND date_part('month', d.date) = date_part('month', $1)
+			  AND date_part('year', d.date) = date_part('year', $1)
+			GROUP BY d.courier_id
+		)
+		SELECT c.courier_id
+		FROM courier c
+				 LEFT JOIN reserved_couriers ON c.courier_id = reserved_couriers.courier_id
+		WHERE c.max_per_day > reserved_couriers.orders
+		LIMIT 1
+	`
+	var stmt *sql.Stmt
+	var err error
+	stmt, err = tx.Prepare(q)
+	if err != nil {
+		return -1, err
+	}
+	defer stmt.Close()
+
+	var courierId int64
+	err = stmt.QueryRow(date).Scan(&courierId)
+	if err != nil {
+		// constraints
+		return -1, err
+	}
+
+	return courierId, nil
 }

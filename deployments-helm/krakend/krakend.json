@@ -555,6 +555,37 @@
       }
     },
     {
+      "endpoint": "/me/orders/{orderId}/delivery",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://delivery-service:8008"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/deliveries/by-user-id/{JWT.sub}/by-order-id/{orderId}"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["USER"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
       "endpoint": "/me/notifications",
       "method": "GET",
       "output_encoding": "no-op",
