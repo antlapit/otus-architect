@@ -28,6 +28,8 @@ func NewPriceApplication(mongo *toolbox.MongoWrapper, productEventWriter *toolbo
 func (app *PriceApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
+	case event.ProductChanged:
+		return app.createProductIfNotExists(data.(event.ProductChanged))
 	case event.ProductPriceChanged:
 		return app.createOrUpdatePrices(data.(event.ProductPriceChanged))
 	default:
@@ -61,6 +63,19 @@ func (app *PriceApplication) createOrUpdatePrices(data event.ProductPriceChanged
 		Price{
 			Quantity: 1,
 			Value:    data.BasePrice.String(),
+		},
+		additionalAttributes,
+	)
+	return err
+}
+
+func (app *PriceApplication) createProductIfNotExists(data event.ProductChanged) error {
+	productId := data.ProductId
+	additionalAttributes := []Price{}
+	_, err := app.priceRepository.SavePrices(productId,
+		Price{
+			Quantity: 1,
+			Value:    "0",
 		},
 		additionalAttributes,
 	)

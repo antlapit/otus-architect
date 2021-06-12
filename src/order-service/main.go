@@ -39,6 +39,7 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 	kafka.StartNewEventReader(event.TOPIC_BILLING, "order-service", marshaller, f)
 	kafka.StartNewEventReader(event.TOPIC_ORDERS, "order-service", marshaller, f)
 	kafka.StartNewEventReader(event.TOPIC_WAREHOUSE, "order-service", marshaller, f)
+	kafka.StartNewEventReader(event.TOPIC_DELIVERY, "order-service", marshaller, f)
 }
 
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {

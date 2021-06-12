@@ -51,12 +51,12 @@ Homework Otus Architect
 * `cd src`
 * `docker build -t antlapit/otus-architect-auth-service:v5 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v5 -f Dockerfile.users .`
-* `docker build -t antlapit/otus-architect-order-service:v5 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-order-service:v6 -f Dockerfile.order .`
 * `docker build -t antlapit/otus-architect-billing-service:v6 -f Dockerfile.billing .`
-* `docker build -t antlapit/otus-architect-notification-service:v5 -f Dockerfile.notification .`
-* `docker build -t antlapit/otus-architect-price-service:v1 -f Dockerfile.price .`
+* `docker build -t antlapit/otus-architect-notification-service:v6 -f Dockerfile.notification .`
+* `docker build -t antlapit/otus-architect-price-service:v2 -f Dockerfile.price .`
 * `docker build -t antlapit/otus-architect-product-service:v1 -f Dockerfile.product .`
-* `docker build -t antlapit/otus-architect-product-search-service:v1 -f Dockerfile.productsearch .`
+* `docker build -t antlapit/otus-architect-product-search-service:v2 -f Dockerfile.productsearch .`
 * `docker build -t antlapit/otus-architect-warehouse-service:v1 -f Dockerfile.warehouse .`
 * `docker build -t antlapit/otus-architect-delivery-service:v1 -f Dockerfile.delivery .`
 
@@ -86,8 +86,8 @@ Homework Otus Architect
 * **Сервис товаров** `helm install product-service-release deployments-helm/product-service`
 * **Сервис цен** `helm install price-service-release deployments-helm/price-service`
 * **Сервис поиска по товарам** `helm install product-search-service-release deployments-helm/product-search-service`
-* **Сервис поиска по товарам** `helm install warehouse-service-release deployments-helm/warehouse-service`
-* **Сервис поиска по товарам** `helm install delivery-service-release deployments-helm/delivery-service`
+* **Сервис склада** `helm install warehouse-service-release deployments-helm/warehouse-service`
+* **Сервис доставки** `helm install delivery-service-release deployments-helm/delivery-service`
 * **Шлюз KrakenD** `helm install krakend deployments-helm/krakend`
 
 **Состав релиза**  
@@ -148,6 +148,7 @@ Homework Otus Architect
   - Логин
   - Создание товара в каталоге
   - Создание нескольких цен на товар
+  - Заполнение товаров на складе
   - Поиск товара по фильтру без аутентификации
   - Получение данных товара без аутентификации
 

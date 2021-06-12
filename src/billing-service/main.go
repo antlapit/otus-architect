@@ -71,20 +71,21 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 		res, err := app.GetAllBillsByUserId(userId)
 		return res, err, false
 	}))
-	/*billByOrder := billsRoute.Group("/by-order-id/:orderId")
-	billByOrder.Use(GenericIdExtractor("orderId"))
-	billByOrder.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
-		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
-
-		res, err := app.GetBillByOrderId(userId, orderId)
-		return res, err, false
-	}))*/
 
 	singleBillRoute := billsRoute.Group("/:billId")
 	singleBillRoute.Use(GenericIdExtractor("billId"))
 	singleBillRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, billId := context.GetInt64("userId"), context.GetInt64("billId")
 		res, err := app.GetBill(userId, billId)
+		return res, err, false
+	}))
+
+	billByOrder := singleUserRoute.Group("/bills-by-order-id/:orderId")
+	billByOrder.Use(GenericIdExtractor("orderId"))
+	billByOrder.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+
+		res, err := app.GetBillByOrderId(userId, orderId)
 		return res, err, false
 	}))
 }

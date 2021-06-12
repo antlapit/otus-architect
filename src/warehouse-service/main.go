@@ -41,16 +41,16 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Wa
 
 func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *core.WarehouseApplication) {
 	publicGroup.Use(errorHandler, ResponseSerializer)
-	initPublicPrices(publicGroup, app)
+	initPublic(publicGroup, app)
 
 	secureGroup.Use(errorHandler)
 	manageGroup := secureGroup.Group("/manage")
 	manageGroup.Use(checkAdminPermissions, ResponseSerializer)
 
-	initPrivatePrices(manageGroup, app)
+	initPrivate(manageGroup, app)
 }
 
-func initPrivatePrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
+func initPrivate(group *gin.RouterGroup, app *core.WarehouseApplication) {
 	managePricesRoute := group.Group("/store-items")
 	singleManageProductRoute := managePricesRoute.Group("/by-product-id/:productId/modify-quantities")
 	singleManageProductRoute.Use(GenericIdExtractor("productId"))
@@ -69,7 +69,7 @@ func initPrivatePrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
 	}))
 }
 
-func initPublicPrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
+func initPublic(group *gin.RouterGroup, app *core.WarehouseApplication) {
 	pricesRoute := group.Group("/store-items")
 
 	productsRoute := pricesRoute.Group("/by-product-id")

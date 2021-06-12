@@ -92,15 +92,15 @@ func (app *WarehouseApplication) onOrderPrepared(data event.OrderPrepared) error
 	err := toolbox.ExecuteInTransaction(app.repository.DB,
 		func(tx *sql.Tx) error {
 			hasPending := app.repository.HasProcessedOrders(data.OrderId)
+			if hasPending {
+				// уже обработан заказ
+				return nil
+			}
 			reserveErr := app.repository.reserveProducts(tx, data.OrderId, m)
 			// TODO outbox
 			if reserveErr == nil {
-				if !hasPending {
-					app.submitWarehouseConfirmed(data.OrderId, data.UserId)
-					return app.submitProductQuantityChanged(m, -1)
-				} else {
-					return nil
-				}
+				app.submitWarehouseConfirmed(data.OrderId, data.UserId)
+				return app.submitProductQuantityChanged(m, -1)
 			} else {
 				return reserveErr
 			}
@@ -117,14 +117,14 @@ func (app *WarehouseApplication) onOrderRolledBack(data event.OrderRolledBack) e
 	err := toolbox.ExecuteInTransaction(app.repository.DB,
 		func(tx *sql.Tx) error {
 			hasPending := app.repository.HasProcessedOrders(data.OrderId)
+			if !hasPending {
+				// уже обработан заказ
+				return nil
+			}
 			freeErr := app.repository.freeProducts(tx, data.OrderId, m)
 			// TODO outbox
 			if freeErr == nil {
-				if hasPending {
-					return app.submitProductQuantityChanged(m, 1)
-				} else {
-					return nil
-				}
+				return app.submitProductQuantityChanged(m, 1)
 			} else {
 				return freeErr
 			}

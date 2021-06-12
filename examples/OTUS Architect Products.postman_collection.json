@@ -574,6 +574,63 @@
 					"response": []
 				},
 				{
+					"name": "Modify Storage",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantityChange\": {{$randomInt}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://arch.homework/otusapp/alapitskii/admin/store-items/by-product-id/{{newProductId}}/modify-quantities",
+							"protocol": "http",
+							"host": [
+								"arch",
+								"homework"
+							],
+							"path": [
+								"otusapp",
+								"alapitskii",
+								"admin",
+								"store-items",
+								"by-product-id",
+								"{{newProductId}}",
+								"modify-quantities"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Get Product By Id With Prices",
 					"event": [
 						{
@@ -588,7 +645,7 @@
 									"}",
 									"",
 									"var jsonData = pm.response.json();",
-									"if ((!jsonData['basePrice']) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+									"if ((!jsonData['prices'] || !jsonData['prices']['basePrice']) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
 									"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
 									"     pm.environment.set(\"collection_tries\", tries + 1);",
 									"     setTimeout(function() {}, sleepBetweenTries);",

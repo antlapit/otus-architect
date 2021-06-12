@@ -10,11 +10,11 @@ import (
 )
 
 type OrderApplication struct {
-	orderRepository  *OrderRepository
+	repository       *OrderRepository
 	orderEventWriter *toolbox.EventWriter
 	priceService     *PriceService
 	priceProvider    PriceProvider
-	orderTopicOutbox *toolbox.Outbox
+	outbox           *toolbox.Outbox
 }
 
 type PriceProvider func(productId int64, quantity int64) (basePrice *big.Float, calcPrice *big.Float, total *big.Float, err error)
@@ -22,22 +22,25 @@ type PriceProvider func(productId int64, quantity int64) (basePrice *big.Float, 
 func NewOrderApplication(db *sql.DB, orderEventWriter *toolbox.EventWriter) *OrderApplication {
 	var orderRepository = &OrderRepository{DB: db}
 	var priceService = NewPriceService()
+	var outbox = toolbox.NewOutbox(db, orderEventWriter)
+	outbox.Start()
 
 	return &OrderApplication{
-		orderRepository:  orderRepository,
+		repository:       orderRepository,
 		orderEventWriter: orderEventWriter,
 		priceService:     priceService,
 		priceProvider:    priceService.GetPrice,
+		outbox:           outbox,
 	}
 }
 
 func (c *OrderApplication) GetAllOrders(filters *OrderFilter) (OrderPage, error) {
-	count, err := c.orderRepository.CountByFilter(filters)
+	count, err := c.repository.CountByFilter(filters)
 	if err != nil {
 		return OrderPage{}, err
 	}
 
-	items, err := c.orderRepository.GetByFilter(filters)
+	items, err := c.repository.GetByFilter(filters)
 	var page toolbox.Page
 	if filters.Paging != nil {
 		page = toolbox.Page{
@@ -59,13 +62,13 @@ func (c *OrderApplication) GetAllOrders(filters *OrderFilter) (OrderPage, error)
 }
 
 func (c *OrderApplication) GetAllOrdersByUserId(userId int64) ([]Order, error) {
-	return c.orderRepository.GetByFilter(&OrderFilter{
+	return c.repository.GetByFilter(&OrderFilter{
 		UserId: []int64{userId},
 	})
 }
 
 func (c *OrderApplication) GetOrder(userId int64, orderId int64) (Order, error) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil || userId != order.UserId {
 		return Order{}, err
 	}
@@ -74,7 +77,7 @@ func (c *OrderApplication) GetOrder(userId int64, orderId int64) (Order, error) 
 }
 
 func (c *OrderApplication) SubmitOrderCreation(userId int64) (interface{}, error) {
-	newId, err := c.orderRepository.GetNextOrderId()
+	newId, err := c.repository.GetNextOrderId()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +89,7 @@ func (c *OrderApplication) SubmitOrderCreation(userId int64) (interface{}, error
 }
 
 func (c *OrderApplication) SubmitOrderReject(userId int64, orderId int64) (interface{}, error) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil || userId != order.UserId {
 		return Order{}, err
 	}
@@ -104,7 +107,7 @@ func (c *OrderApplication) SubmitOrderReject(userId int64, orderId int64) (inter
 }
 
 func (c *OrderApplication) SubmitOrderPrepared(userId int64, orderId int64) (interface{}, error) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil || userId != order.UserId {
 		return Order{}, err
 	}
@@ -123,7 +126,23 @@ func (c *OrderApplication) SubmitOrderPrepared(userId int64, orderId int64) (int
 }
 
 func (c *OrderApplication) getConvertedOrderItems(orderId int64) ([]event.OrderItem, error) {
-	items, err := c.orderRepository.GetAllItems(orderId)
+	items, err := c.repository.GetAllItems(orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	eventItems := []event.OrderItem{}
+	for _, item := range items {
+		eventItems = append(eventItems, event.OrderItem{
+			ProductId: item.ProductId,
+			Quantity:  item.Quantity,
+		})
+	}
+	return eventItems, nil
+}
+
+func (c *OrderApplication) getConvertedOrderItemsInTransaction(tx *sql.Tx, orderId int64) ([]event.OrderItem, error) {
+	items, err := c.repository.GetAllItemsInTransaction(tx, orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +159,7 @@ func (c *OrderApplication) getConvertedOrderItems(orderId int64) ([]event.OrderI
 }
 
 func (c *OrderApplication) SubmitOrderAddItem(userId int64, orderId int64, productId int64, quantity int64) (interface{}, error) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil || userId != order.UserId {
 		return Order{}, err
 	}
@@ -158,7 +177,7 @@ func (c *OrderApplication) SubmitOrderAddItem(userId int64, orderId int64, produ
 }
 
 func (c *OrderApplication) SubmitOrderRemoveItem(userId int64, orderId int64, productId int64, quantity int64) (interface{}, error) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil || userId != order.UserId {
 		return Order{}, err
 	}
@@ -190,6 +209,10 @@ func (c *OrderApplication) ProcessEvent(id string, eventType string, data interf
 		return c.confirmWarehouse(data.(event.OrderWarehouseConfirmed))
 	case event.OrderWarehouseRejected:
 		return c.rejectWarehouse(data.(event.OrderWarehouseRejected))
+	case event.OrderDeliveryConfirmed:
+		return c.confirmDelivery(data.(event.OrderDeliveryConfirmed))
+	case event.OrderDeliveryRejected:
+		return c.rejectDelivery(data.(event.OrderDeliveryRejected))
 	case event.OrderRolledBack:
 		return c.rollbackOrder(data.(event.OrderRolledBack))
 	case event.OrderConfirmed:
@@ -207,7 +230,7 @@ func (c *OrderApplication) ProcessEvent(id string, eventType string, data interf
 }
 
 func (c *OrderApplication) createOrder(data event.OrderCreated) error {
-	success, err := c.orderRepository.Create(data.UserId, data.OrderId, new(big.Float))
+	success, err := c.repository.Create(data.UserId, data.OrderId, new(big.Float))
 	if err != nil || !success {
 		log.Error("Error creating order")
 	}
@@ -240,7 +263,7 @@ func (c *OrderApplication) completeOrder(data event.PaymentCompleted) error {
 		return err
 	}
 
-	res, err := c.orderRepository.Complete(order.Id)
+	res, err := c.repository.Complete(order.Id)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -259,11 +282,16 @@ func (c *OrderApplication) prepareOrder(data event.OrderPrepared) error {
 	if alreadyProcessed {
 		return nil
 	}
+	if order.Total == "0" {
+		return &OrderInvalidError{
+			message: "Empty Order",
+		}
+	}
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	res, err := c.orderRepository.Prepare(order.Id)
+	res, err := c.repository.Prepare(order.Id)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -286,7 +314,7 @@ func (c *OrderApplication) rollbackOrder(data event.OrderRolledBack) error {
 		log.Error(err.Error())
 		return err
 	}
-	res, err := c.orderRepository.Rollback(order.Id)
+	res, err := c.repository.Rollback(order.Id)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -309,7 +337,7 @@ func (c *OrderApplication) confirmOrder(data event.OrderConfirmed) error {
 		log.Error(err.Error())
 		return err
 	}
-	res, err := c.orderRepository.Confirm(order.Id)
+	res, err := c.repository.Confirm(order.Id)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -332,7 +360,7 @@ func (c *OrderApplication) rejectOrder(data event.OrderRejected) error {
 		log.Error(err.Error())
 		return err
 	}
-	res, err := c.orderRepository.Reject(order.Id)
+	res, err := c.repository.Reject(order.Id)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -351,9 +379,9 @@ func (c *OrderApplication) addOrderItems(data event.OrderItemsAdded) error {
 	for _, item := range data.Items {
 		quantities[item.ProductId] = item.Quantity
 	}
-	return toolbox.ExecuteInTransaction(c.orderRepository.DB,
+	return toolbox.ExecuteInTransaction(c.repository.DB,
 		func(tx *sql.Tx) error {
-			return c.orderRepository.modifyItemsQuantity(tx, data.OrderId, quantities, c.priceProvider)
+			return c.repository.modifyItemsQuantity(tx, data.OrderId, quantities, c.priceProvider)
 		},
 	)
 }
@@ -363,20 +391,42 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) error 
 	for _, item := range data.Items {
 		quantities[item.ProductId] = -item.Quantity
 	}
-	return toolbox.ExecuteInTransaction(c.orderRepository.DB,
+	return toolbox.ExecuteInTransaction(c.repository.DB,
 		func(tx *sql.Tx) error {
-			return c.orderRepository.modifyItemsQuantity(tx, data.OrderId, quantities, c.priceProvider)
+			return c.repository.modifyItemsQuantity(tx, data.OrderId, quantities, c.priceProvider)
 		},
 	)
 }
 
 func (c *OrderApplication) confirmWarehouse(data event.OrderWarehouseConfirmed) error {
-	// TODO update warehouse state _, err := c.orderRepository.Rollback(data.OrderId)
-
-	return c.SubmitOrderConfirmed(data.OrderId)
+	return toolbox.ExecuteInTransaction(c.repository.DB,
+		func(tx *sql.Tx) error {
+			err := c.repository.UpdateWarehouseConfirmation(tx, data.OrderId, true)
+			if err != nil {
+				return err
+			}
+			return c.SubmitOrderConfirmed(tx, data.OrderId)
+		},
+	)
 }
 
 func (c *OrderApplication) rejectWarehouse(data event.OrderWarehouseRejected) error {
+	return c.SubmitOrderRolledBack(data.OrderId)
+}
+
+func (c *OrderApplication) confirmDelivery(data event.OrderDeliveryConfirmed) error {
+	return toolbox.ExecuteInTransaction(c.repository.DB,
+		func(tx *sql.Tx) error {
+			err := c.repository.UpdateDeliveryConfirmation(tx, data.OrderId, true)
+			if err != nil {
+				return err
+			}
+			return c.SubmitOrderConfirmed(tx, data.OrderId)
+		},
+	)
+}
+
+func (c *OrderApplication) rejectDelivery(data event.OrderDeliveryRejected) error {
 	return c.SubmitOrderRolledBack(data.OrderId)
 }
 
@@ -385,7 +435,7 @@ func (c *OrderApplication) rejectPayment(data event.PaymentRejected) error {
 }
 
 func (c *OrderApplication) SubmitOrderRolledBack(orderId int64) error {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil {
 		return err
 	}
@@ -404,28 +454,31 @@ func (c *OrderApplication) SubmitOrderRolledBack(orderId int64) error {
 	return err
 }
 
-func (c *OrderApplication) SubmitOrderConfirmed(orderId int64) error {
-	order, err := c.orderRepository.GetById(orderId)
+func (c *OrderApplication) SubmitOrderConfirmed(tx *sql.Tx, orderId int64) error {
+	order, err := c.repository.GetByIdInTransaction(tx, orderId)
 	if err != nil {
 		return err
 	}
 
-	eventItems, err := c.getConvertedOrderItems(orderId)
-	if err != nil {
-		return err
-	}
+	if order.WarehouseConfirmed && order.DeliveryConfirmed {
+		eventItems, err := c.getConvertedOrderItemsInTransaction(tx, orderId)
+		if err != nil {
+			return err
+		}
 
-	_, err = c.orderEventWriter.WriteEvent(event.EVENT_ORDER_CONFIRMED, event.OrderConfirmed{
-		OrderId: order.Id,
-		UserId:  order.UserId,
-		Items:   eventItems,
-		Total:   order.Total,
-	})
-	return err
+		return c.outbox.SubmitEvent(tx, event.EVENT_ORDER_CONFIRMED, event.OrderConfirmed{
+			OrderId: order.Id,
+			UserId:  order.UserId,
+			Items:   eventItems,
+			Total:   order.Total,
+		})
+	} else {
+		return nil
+	}
 }
 
 func (c *OrderApplication) getOrderWithStatus(orderId int64, target *OrderStatus) (Order, error, bool) {
-	order, err := c.orderRepository.GetById(orderId)
+	order, err := c.repository.GetById(orderId)
 	if err != nil {
 		log.Error(err.Error())
 		return Order{}, err, false

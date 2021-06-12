@@ -16,11 +16,13 @@ type OrderRepository struct {
 }
 
 type Order struct {
-	Id     int64      `json:"orderId"`
-	UserId int64      `json:"userId" binding:"required"`
-	Status string     `json:"status" binding:"required"`
-	Total  string     `json:"total" binding:"required"`
-	Date   *time.Time `json:"date" binding:"required"`
+	Id                 int64      `json:"orderId"`
+	UserId             int64      `json:"userId" binding:"required"`
+	Status             string     `json:"status" binding:"required"`
+	Total              string     `json:"total" binding:"required"`
+	Date               *time.Time `json:"date" binding:"required"`
+	WarehouseConfirmed bool       `json:"warehouseConfirmed"`
+	DeliveryConfirmed  bool       `json:"deliveryConfirmed"`
 }
 
 type OrderItem struct {
@@ -119,8 +121,19 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 }
 
 func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
-	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, user_id, status, total, date FROM orders WHERE id = $1")
+	return repository.GetByIdInTransaction(nil, orderId)
+}
+
+func (repository *OrderRepository) GetByIdInTransaction(tx *sql.Tx, orderId int64) (Order, error) {
+	q := "SELECT id, user_id, status, total, date, warehouse_confirmed, delivery_confirmed FROM orders WHERE id = $1"
+	var stmt *sql.Stmt
+	var err error
+	if tx == nil {
+		db := repository.DB
+		stmt, err = db.Prepare(q)
+	} else {
+		stmt, err = tx.Prepare(q)
+	}
 	if err != nil {
 		return Order{}, err
 	}
@@ -128,7 +141,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 
 	var order Order
 	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
+	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date, &order.WarehouseConfirmed, &order.DeliveryConfirmed)
 	order.Total = big.NewFloat(totalVal.Float64).String()
 	if err != nil {
 		// constraints
@@ -348,9 +361,19 @@ func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 }
 
 func (repository *OrderRepository) GetAllItems(orderId int64) ([]OrderItem, error) {
-	db := repository.DB
+	return repository.GetAllItemsInTransaction(nil, orderId)
+}
 
-	stmt, err := db.Prepare("SELECT id, order_id, product_id, quantity, base_price, calc_price, total FROM items WHERE order_id = $1")
+func (repository *OrderRepository) GetAllItemsInTransaction(tx *sql.Tx, orderId int64) ([]OrderItem, error) {
+	q := "SELECT id, order_id, product_id, quantity, base_price, calc_price, total FROM items WHERE order_id = $1"
+	var stmt *sql.Stmt
+	var err error
+	if tx == nil {
+		db := repository.DB
+		stmt, err = db.Prepare(q)
+	} else {
+		stmt, err = tx.Prepare(q)
+	}
 	if err != nil {
 		return []OrderItem{}, err
 	}
@@ -497,4 +520,54 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 		return err
 	}
 	return err
+}
+
+func (repository *OrderRepository) UpdateWarehouseConfirmation(tx *sql.Tx, orderId int64, warehouseConfirmation bool) error {
+	stmt, err := tx.Prepare(
+		`UPDATE orders
+				SET warehouse_confirmed = $1
+				WHERE id = $2`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(warehouseConfirmation, orderId)
+	if err != nil {
+		return err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	} else if affectedRows == 0 {
+		return &OrderNotFoundError{id: orderId}
+	} else {
+		return nil
+	}
+}
+
+func (repository *OrderRepository) UpdateDeliveryConfirmation(tx *sql.Tx, orderId int64, deliveryConfirmation bool) error {
+	stmt, err := tx.Prepare(
+		`UPDATE orders
+				SET delivery_confirmed = $1
+				WHERE id = $2`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(deliveryConfirmation, orderId)
+	if err != nil {
+		return err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	} else if affectedRows == 0 {
+		return &OrderNotFoundError{id: orderId}
+	} else {
+		return nil
+	}
 }

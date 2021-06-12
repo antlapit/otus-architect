@@ -41,3 +41,7 @@ initdbScripts:
     CREATE USER warehouse;
     ALTER USER warehouse WITH PASSWORD 'FhD7H2SZxYHGaWFA';
     CREATE DATABASE warehouse WITH OWNER warehouse;
+
+    CREATE USER delivery;
+    ALTER USER delivery WITH PASSWORD 'BEd8qt5X4eKWDSWP';
+    CREATE DATABASE delivery WITH OWNER delivery;
