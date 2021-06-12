@@ -14,6 +14,8 @@ Homework Otus Architect
 - Price Service - сервис цен за товары. Предназначен для работы с ценами за товары с учетом разного количество товарных позиций
 - Product Search Service - сервис поиска по товарами
 - Notification Service - сервис уведомлений клиента. Формирует сообщения в ответ на события в других сервисах
+- Warehouse Service - сервис склада. Хранит данные по остаткам товаров
+- Delivery Service - сервис доставки. Хранит данные доступки по заказу
 ![Компоненты](./architecture/components.jpeg)
   
 ### Ключевые решения
@@ -50,11 +52,13 @@ Homework Otus Architect
 * `docker build -t antlapit/otus-architect-auth-service:v5 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v5 -f Dockerfile.users .`
 * `docker build -t antlapit/otus-architect-order-service:v5 -f Dockerfile.order .`
-* `docker build -t antlapit/otus-architect-billing-service:v5 -f Dockerfile.billing .`
+* `docker build -t antlapit/otus-architect-billing-service:v6 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v5 -f Dockerfile.notification .`
 * `docker build -t antlapit/otus-architect-price-service:v1 -f Dockerfile.price .`
 * `docker build -t antlapit/otus-architect-product-service:v1 -f Dockerfile.product .`
 * `docker build -t antlapit/otus-architect-product-search-service:v1 -f Dockerfile.productsearch .`
+* `docker build -t antlapit/otus-architect-warehouse-service:v1 -f Dockerfile.warehouse .`
+* `docker build -t antlapit/otus-architect-delivery-service:v1 -f Dockerfile.delivery .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -82,6 +86,8 @@ Homework Otus Architect
 * **Сервис товаров** `helm install product-service-release deployments-helm/product-service`
 * **Сервис цен** `helm install price-service-release deployments-helm/price-service`
 * **Сервис поиска по товарам** `helm install product-search-service-release deployments-helm/product-search-service`
+* **Сервис поиска по товарам** `helm install warehouse-service-release deployments-helm/warehouse-service`
+* **Сервис поиска по товарам** `helm install delivery-service-release deployments-helm/delivery-service`
 * **Шлюз KrakenD** `helm install krakend deployments-helm/krakend`
 
 **Состав релиза**  
@@ -101,6 +107,8 @@ Homework Otus Architect
   * для БД счетов `helm install postgres-exporter-auth prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml`
   * для БД уведомлений `helm install postgres-exporter-notification prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml`
   * для БД поиска товаров `helm install postgres-exporter-product-search prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product-search.yaml`
+  * для БД склада `helm install postgres-exporter-warehouse prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-warehouse.yaml`
+  * для БД доставки `helm install postgres-exporter-delivery prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-delivery.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`

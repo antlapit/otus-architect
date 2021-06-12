@@ -33,6 +33,10 @@ func (app *NotificationApplication) ProcessEvent(id string, eventType string, da
 		castedData := data.(event.OrderRejected)
 		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
 		return err
+	case event.OrderRolledBack:
+		castedData := data.(event.OrderRolledBack)
+		_, err := app.notificationRepository.Create(castedData.UserId, castedData.OrderId, id, eventType, data)
+		return err
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}

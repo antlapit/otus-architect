@@ -38,6 +38,7 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 	}
 	kafka.StartNewEventReader(event.TOPIC_BILLING, "order-service", marshaller, f)
 	kafka.StartNewEventReader(event.TOPIC_ORDERS, "order-service", marshaller, f)
+	kafka.StartNewEventReader(event.TOPIC_WAREHOUSE, "order-service", marshaller, f)
 }
 
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
@@ -76,7 +77,7 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	}))
 	singleUserOrderRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
-		res, err := app.SubmitOrderConfirm(userId, orderId)
+		res, err := app.SubmitOrderPrepared(userId, orderId)
 		return gin.H{
 			"eventId": res,
 		}, err, false

@@ -1,16 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: antlapit/otus-architect-billing-service
+  repository: antlapit/otus-architect-warehouse-service
   pullPolicy: IfNotPresent
-  tag: "v6"
+  tag: "v1"
 
-nameOverride: billing-service
-fullnameOverride: "billing-service"
+nameOverride: warehouse-service
+fullnameOverride: "warehouse-service"
 
 service:
   type: NodePort
-  port: 8002
+  port: 8009
 
 ingress:
   enabled: false
@@ -37,9 +37,9 @@ autoscaling:
 postgresql:
   postgresqlHost: postgres-postgresql
   postgresqlPort: 5432
-  postgresqlDatabase: billing
-  postgresqlUsername: billing
-  postgresqlPassword: 9nS8h9qZLVn64Egz
+  postgresqlDatabase: warehouse
+  postgresqlUsername: warehouse
+  postgresqlPassword: FhD7H2SZxYHGaWFA
 
 health:
   path: /health

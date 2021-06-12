@@ -1,10 +1,8 @@
 package core
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"github.com/antlapit/otus-architect/toolbox"
 	"strconv"
 )
 
@@ -12,10 +10,9 @@ type WarehouseRepository struct {
 	DB *sql.DB
 }
 
-type ProductQuantities struct {
-	Id        int64 `json:"productId" binding:"required"`
-	Available int64 `json:"available" binding:"required"`
-	Reserved  int64 `json:"reserved" binding:"required"`
+type StoreItem struct {
+	ProductId         int64 `json:"productId" binding:"required"`
+	AvailableQuantity int64 `json:"available_quantity" binding:"required"`
 }
 
 type ProductNotFoundError struct {
@@ -38,9 +35,9 @@ func (repository *WarehouseRepository) CreateIfNotExists(productId int64) (bool,
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO product_quantity(id) 
+		`INSERT INTO store_item(product_id) 
 				VALUES($1) 
-				ON CONFLICT (id) DO NOTHING`,
+				ON CONFLICT (product_id) DO NOTHING`,
 	)
 	if err != nil {
 		return false, err
@@ -59,13 +56,11 @@ func (repository *WarehouseRepository) CreateIfNotExists(productId int64) (bool,
 	}
 }
 
-func (repository *WarehouseRepository) updateProductAvailableQuantity(productId int64, quantity int64) (bool, error) {
-	db := repository.DB
-
-	stmt, err := db.Prepare(
-		`UPDATE product_quantity
-				SET available = available + $1
-				WHERE id = $2`,
+func (repository *WarehouseRepository) updateProductAvailableQuantity(tx *sql.Tx, productId int64, quantity int64) (bool, error) {
+	stmt, err := tx.Prepare(
+		`UPDATE store_item
+				SET available_quantity = available_quantity + $1
+				WHERE product_id = $2`,
 	)
 	if err != nil {
 		return false, err
@@ -86,35 +81,55 @@ func (repository *WarehouseRepository) updateProductAvailableQuantity(productId 
 	}
 }
 
-func (repository *WarehouseRepository) GetQuantitiesByProductId(productId int64) (ProductQuantities, error) {
+func (repository *WarehouseRepository) GetItemByProductId(productId int64) (StoreItem, error) {
 	db := repository.DB
-	stmt, err := db.Prepare("SELECT id, available, reserved FROM product_quantity WHERE id = $1")
+	stmt, err := db.Prepare(
+		`SELECT product_id, available_quantity 
+				FROM store_item 
+				WHERE product_id = $1`,
+	)
 	if err != nil {
-		return ProductQuantities{}, err
+		return StoreItem{}, err
 	}
 	defer stmt.Close()
 
-	var quantities ProductQuantities
-	err = stmt.QueryRow(productId).Scan(&quantities.Id, &quantities.Available, &quantities.Reserved)
+	var storeItem StoreItem
+	err = stmt.QueryRow(productId).Scan(&storeItem.ProductId, &storeItem.AvailableQuantity)
 	if err != nil {
 		// constraints
-		return ProductQuantities{}, &ProductNotFoundError{id: productId}
+		return StoreItem{}, &ProductNotFoundError{id: productId}
 	}
 
-	return quantities, nil
+	return storeItem, nil
 }
 
-func (repository *WarehouseRepository) reserveProducts(quantities map[int64]int64) error {
-	db := repository.DB
-	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{})
+func (repository *WarehouseRepository) reserveProducts(tx *sql.Tx, orderId int64, quantities map[int64]int64) error {
+	stmt, err := tx.Prepare(
+		`INSERT INTO processed_orders(order_id) 
+				VALUES($1)
+				ON CONFLICT (order_id) DO NOTHING`,
+	)
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
-	stmt, err := tx.Prepare(
-		`UPDATE product_quantity
-				SET available = available - $1, reserved = reserved + $1
-				WHERE id = $2`,
+	res, err := stmt.Exec(orderId)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil
+	}
+
+	stmt, err = tx.Prepare(
+		`UPDATE store_item
+				SET available_quantity = available_quantity - $1
+				WHERE product_id = $2`,
 	)
 	if err != nil {
 		return err
@@ -124,30 +139,44 @@ func (repository *WarehouseRepository) reserveProducts(quantities map[int64]int6
 	for productId, reserveQuantities := range quantities {
 		res, err := stmt.Exec(reserveQuantities, productId)
 		if err != nil {
-			return toolbox.Rollback(tx, err)
+			return err
 		}
 		affectedRows, err := res.RowsAffected()
 		if err != nil {
-			return toolbox.Rollback(tx, err)
+			return err
 		} else if affectedRows == 0 {
-			return toolbox.Rollback(tx, &ProductNotFoundError{id: productId})
+			return &ProductNotFoundError{id: productId}
 		}
 	}
-
-	return tx.Commit()
+	return nil
 }
 
-func (repository *WarehouseRepository) freeProducts(quantities map[int64]int64) error {
-	db := repository.DB
-	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{})
+func (repository *WarehouseRepository) freeProducts(tx *sql.Tx, orderId int64, quantities map[int64]int64) error {
+	stmt, err := tx.Prepare(
+		`DELETE FROM processed_orders 
+				WHERE order_id = $1`,
+	)
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
-	stmt, err := tx.Prepare(
-		`UPDATE product_quantity
-				SET available = available + $1, reserved = reserved - $1
-				WHERE id = $2`,
+	res, err := stmt.Exec(orderId)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil
+	}
+
+	stmt, err = tx.Prepare(
+		`UPDATE store_item
+				SET available_quantity = available_quantity + $1
+				WHERE product_id = $2`,
 	)
 	if err != nil {
 		return err
@@ -157,15 +186,33 @@ func (repository *WarehouseRepository) freeProducts(quantities map[int64]int64) 
 	for productId, reserveQuantities := range quantities {
 		res, err := stmt.Exec(reserveQuantities, productId)
 		if err != nil {
-			return toolbox.Rollback(tx, err)
+			return err
 		}
 		affectedRows, err := res.RowsAffected()
 		if err != nil {
-			return toolbox.Rollback(tx, err)
+			return err
 		} else if affectedRows == 0 {
-			return toolbox.Rollback(tx, &ProductNotFoundError{id: productId})
+			return &ProductNotFoundError{id: productId}
 		}
 	}
+	return nil
+}
 
-	return tx.Commit()
+func (repository *WarehouseRepository) HasProcessedOrders(orderId int64) bool {
+	db := repository.DB
+	stmt, err := db.Prepare(`select count(1)
+    			 FROM processed_orders 
+				WHERE order_id = $1`)
+	if err != nil {
+		return false
+	}
+	defer stmt.Close()
+
+	var count uint64
+	err = stmt.QueryRow(orderId).Scan(&count)
+	if err != nil {
+		return false
+	} else {
+		return count > 0
+	}
 }

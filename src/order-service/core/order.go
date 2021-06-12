@@ -5,6 +5,7 @@ import (
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/antlapit/otus-architect/toolbox"
+	"github.com/prometheus/common/log"
 	"math/big"
 	"strconv"
 	"time"
@@ -20,6 +21,16 @@ type Order struct {
 	Status string     `json:"status" binding:"required"`
 	Total  string     `json:"total" binding:"required"`
 	Date   *time.Time `json:"date" binding:"required"`
+}
+
+type OrderItem struct {
+	Id        int64      `json:"itemId"  binding:"required"`
+	OrderId   int64      `json:"orderId" binding:"required"`
+	ProductId int64      `json:"productId" binding:"required"`
+	Quantity  int64      `json:"quantity" binding:"required"`
+	BasePrice *big.Float `json:"basePrice" binding:"required"`
+	CalcPrice *big.Float `json:"calcPrice" binding:"required"`
+	Total     *big.Float `json:"total" binding:"required"`
 }
 
 var DbFieldAdditionalMapping = map[string]string{
@@ -48,11 +59,37 @@ func (error *OrderInvalidError) Error() string {
 	return error.message
 }
 
-const (
-	StatusNew       = "NEW"
-	StatusConfirmed = "CONFIRMED"
-	StatusCompleted = "COMPLETED"
-	StatusRejected  = "REJECTED"
+type OrderStatus struct {
+	code     string
+	order    int64
+	terminal bool
+}
+
+func getOrderStatusByCode(code string) *OrderStatus {
+	switch code {
+	case StatusNew.code:
+		return StatusNew
+	case StatusPrepared.code:
+		return StatusPrepared
+	case StatusRolledBack.code:
+		return StatusRolledBack
+	case StatusConfirmed.code:
+		return StatusConfirmed
+	case StatusCompleted.code:
+		return StatusCompleted
+	case StatusRejected.code:
+		return StatusRejected
+	}
+	return nil
+}
+
+var (
+	StatusNew        = &OrderStatus{"NEW", 0, false}
+	StatusPrepared   = &OrderStatus{"PREPARED", 1, false}
+	StatusRolledBack = &OrderStatus{"ROLLED_BACK", 100, true}
+	StatusConfirmed  = &OrderStatus{"CONFIRMED", 2, false}
+	StatusCompleted  = &OrderStatus{"COMPLETED", 100, true}
+	StatusRejected   = &OrderStatus{"REJECTED", 100, true}
 )
 
 func (repository *OrderRepository) Create(userId int64, orderId int64, total *big.Float) (bool, error) {
@@ -69,7 +106,7 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(orderId, userId, StatusNew, total.String(), time.Now())
+	res, err := stmt.Exec(orderId, userId, StatusNew.code, total.String(), time.Now())
 	if err != nil {
 		return false, err
 	}
@@ -135,31 +172,85 @@ func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, er
 }
 
 func (repository *OrderRepository) Confirm(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusNew, StatusConfirmed)
-}
-
-func (repository *OrderRepository) Reject(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusNew, StatusRejected)
-}
-
-func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusConfirmed, StatusCompleted)
-}
-
-func (repository *OrderRepository) updateOrderState(orderId int64, fromState string, toState string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = $1
-				WHERE id = $2 AND status = $3`,
+				SET status = $1, warehouse_confirmed = true, delivery_confirmed = true
+				WHERE id = $2`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(toState, orderId, fromState)
+	res, err := stmt.Exec(StatusConfirmed.code, orderId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &OrderInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &OrderNotFoundError{id: orderId}
+	} else {
+		return true, nil
+	}
+}
+
+func (repository *OrderRepository) Reject(orderId int64) (bool, error) {
+	return repository.updateOrderState(orderId, StatusRejected)
+}
+
+func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
+	return repository.updateOrderState(orderId, StatusCompleted)
+}
+
+func (repository *OrderRepository) Prepare(orderId int64) (bool, error) {
+	return repository.updateOrderState(orderId, StatusPrepared)
+}
+
+func (repository *OrderRepository) Rollback(orderId int64) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE orders
+				SET status = $1, warehouse_confirmed = false, delivery_confirmed = false
+				WHERE id = $2`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(StatusRolledBack.code, orderId)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return false, &OrderInvalidError{err.Error()}
+	} else if affectedRows == 0 {
+		return false, &OrderNotFoundError{id: orderId}
+	} else {
+		return true, nil
+	}
+}
+
+func (repository *OrderRepository) updateOrderState(orderId int64, toState *OrderStatus) (bool, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare(
+		`UPDATE orders
+				SET status = $1
+				WHERE id = $2`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(toState.code, orderId)
 	if err != nil {
 		return false, err
 	}
@@ -184,10 +275,8 @@ func (repository *OrderRepository) GetNextOrderId() (int64, error) {
 	return id, nil
 }
 
-func (repository *OrderRepository) ModifyTotal(orderId int64, total *big.Float) (bool, error) {
-	db := repository.DB
-
-	stmt, err := db.Prepare(
+func (repository *OrderRepository) IncreaseTotal(tx *sql.Tx, orderId int64, total *big.Float) (bool, error) {
+	stmt, err := tx.Prepare(
 		`UPDATE orders
 				SET total = total + $1
 				WHERE id = $2`,
@@ -256,4 +345,156 @@ func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 		Where(predicate)
 
 	return qBuilder
+}
+
+func (repository *OrderRepository) GetAllItems(orderId int64) ([]OrderItem, error) {
+	db := repository.DB
+
+	stmt, err := db.Prepare("SELECT id, order_id, product_id, quantity, base_price, calc_price, total FROM items WHERE order_id = $1")
+	if err != nil {
+		return []OrderItem{}, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(orderId)
+	if err != nil {
+		// constraints
+		return []OrderItem{}, err
+	} else {
+		var result = make([]OrderItem, 0)
+		for rows.Next() {
+			var item OrderItem
+			var basePriceVal sql.NullFloat64
+			var calcPriceVal sql.NullFloat64
+			var totalVal sql.NullFloat64
+			err = rows.Scan(&item.Id, &item.OrderId, &item.ProductId, &item.Quantity, &basePriceVal, &calcPriceVal, &totalVal)
+			if err != nil {
+				return []OrderItem{}, err
+			}
+			item.BasePrice = big.NewFloat(basePriceVal.Float64)
+			item.CalcPrice = big.NewFloat(calcPriceVal.Float64)
+			item.Total = big.NewFloat(totalVal.Float64)
+			result = append(result, item)
+		}
+		return result, nil
+	}
+}
+
+func (repository *OrderRepository) getItem(tx *sql.Tx, orderId int64, productId int64) (OrderItem, error) {
+	stmt, err := tx.Prepare("SELECT id, order_id, product_id, quantity, base_price, calc_price, total FROM items WHERE order_id = $1 AND product_id = $2")
+	if err != nil {
+		return OrderItem{}, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(orderId, productId)
+
+	var item OrderItem
+	var basePriceVal sql.NullFloat64
+	var calcPriceVal sql.NullFloat64
+	var totalVal sql.NullFloat64
+	err = row.Scan(&item.Id, &item.OrderId, &item.ProductId, &item.Quantity, &basePriceVal, &calcPriceVal, &totalVal)
+	if err != nil {
+		return OrderItem{}, err
+	}
+	item.BasePrice = big.NewFloat(basePriceVal.Float64)
+	item.CalcPrice = big.NewFloat(calcPriceVal.Float64)
+	item.Total = big.NewFloat(totalVal.Float64)
+	return item, err
+}
+
+func (repository *OrderRepository) executeItemsAdding(tx *sql.Tx, orderId int64, productId int64, quantity int64) (bool, error) {
+	stmt, err := tx.Prepare(
+		`INSERT INTO items(order_id, product_id, quantity) 
+				VALUES($1, $2, $3) 
+				ON CONFLICT (order_id, product_id) DO UPDATE
+				SET quantity = items.quantity + $4`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	if quantity > 0 {
+		res, err = stmt.Exec(orderId, productId, quantity, quantity)
+	} else {
+		res, err = stmt.Exec(orderId, productId, 0, quantity)
+	}
+	if err != nil {
+		return false, err
+	}
+	_, err = res.RowsAffected()
+	if err != nil {
+		return false, &OrderInvalidError{err.Error()}
+	} else {
+		return true, nil
+	}
+}
+
+func (repository *OrderRepository) modifyPrices(tx *sql.Tx, orderId int64, productId int64, basePrice *big.Float, calcPrice *big.Float, total *big.Float) (bool, error) {
+	stmt, err := tx.Prepare(
+		`UPDATE items 
+				SET base_price = $3, calc_price = $4, total = $5
+				WHERE order_id = $1 AND product_id = $2`,
+	)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(orderId, productId, basePrice.String(), calcPrice.String(), total.String())
+	if err != nil {
+		return false, err
+	}
+	_, err = res.RowsAffected()
+	if err != nil {
+		return false, &OrderInvalidError{err.Error()}
+	} else {
+		return true, nil
+	}
+}
+
+func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64, quantities map[int64]int64, priceProvider PriceProvider) error {
+	order, err := repository.GetById(orderId)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	if order.Status != StatusNew.code {
+		log.Error("Order is not new")
+		return nil
+	}
+	total := new(big.Float)
+	for productId, quantity := range quantities {
+		_, err := repository.executeItemsAdding(tx, orderId, productId, quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		orderItem, err := repository.getItem(tx, orderId, productId)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+
+		basePrice, calcPrice, itemTotal, err := priceProvider(productId, orderItem.Quantity)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		_, err = repository.modifyPrices(tx, orderId, productId, basePrice, calcPrice, itemTotal)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		total = total.Add(total, itemTotal)
+	}
+	_, err = repository.IncreaseTotal(tx, orderId, total)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	return err
 }

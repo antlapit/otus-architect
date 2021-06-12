@@ -37,3 +37,7 @@ initdbScripts:
     CREATE USER productsearch;
     ALTER USER productsearch WITH PASSWORD 'qwJHMsPkVWx4SFqm';
     CREATE DATABASE productsearch WITH OWNER productsearch;
+
+    CREATE USER warehouse;
+    ALTER USER warehouse WITH PASSWORD 'FhD7H2SZxYHGaWFA';
+    CREATE DATABASE warehouse WITH OWNER warehouse;

@@ -6,6 +6,8 @@ helm delete notification-service-release
 helm delete product-service-release
 helm delete price-service-release
 helm delete product-search-service-release
+helm delete warehouse-service-release
+helm delete delivery-service-release
 helm delete krakend
 
 helm delete prom
@@ -16,6 +18,8 @@ helm delete postgres-exporter-order
 helm delete postgres-exporter-billing
 helm delete postgres-exporter-notification
 helm delete postgres-exporter-product-search
+helm delete postgres-exporter-warehouse
+helm delete postgres-exporter-delivery
 
 helm delete kafka
 helm delete postgres

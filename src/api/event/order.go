@@ -4,6 +4,8 @@ const (
 	TOPIC_ORDERS              = "order.events"
 	EVENT_ORDER_CREATED       = "order.created"
 	EVENT_ORDER_CONFIRMED     = "order.confirmed"
+	EVENT_ORDER_PREPARED      = "order.prepared"
+	EVENT_ORDER_ROLLED_BACK   = "order.rolledback"
 	EVENT_ORDER_REJECTED      = "order.rejected"
 	EVENT_ORDER_COMPLETED     = "order.completed"
 	EVENT_ORDER_ITEMS_ADDED   = "order.itemsadded"
@@ -13,6 +15,8 @@ const (
 var OrderEvents = map[string]interface{}{
 	EVENT_ORDER_CREATED:       OrderCreated{},
 	EVENT_ORDER_CONFIRMED:     OrderConfirmed{},
+	EVENT_ORDER_PREPARED:      OrderPrepared{},
+	EVENT_ORDER_ROLLED_BACK:   OrderRolledBack{},
 	EVENT_ORDER_REJECTED:      OrderRejected{},
 	EVENT_ORDER_COMPLETED:     OrderCompleted{},
 	EVENT_ORDER_ITEMS_ADDED:   OrderItemsAdded{},
@@ -25,6 +29,20 @@ type OrderCreated struct {
 }
 
 type OrderConfirmed struct {
+	OrderId int64  `json:"orderId" binding:"required"`
+	UserId  int64  `json:"userId" binding:"required"`
+	Total   string `json:"total" binding:"required"`
+	Items   []OrderItem
+}
+
+type OrderPrepared struct {
+	OrderId int64  `json:"orderId" binding:"required"`
+	UserId  int64  `json:"userId" binding:"required"`
+	Total   string `json:"total" binding:"required"`
+	Items   []OrderItem
+}
+
+type OrderRolledBack struct {
 	OrderId int64  `json:"orderId" binding:"required"`
 	UserId  int64  `json:"userId" binding:"required"`
 	Total   string `json:"total" binding:"required"`

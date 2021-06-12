@@ -230,7 +230,7 @@ func (repository *ProductSearchRepository) UpdatePrice(productId int64, minPrice
 	}
 }
 
-func (repository *ProductSearchRepository) UpdateQuantities(productId int64, quantity int64, increased bool) (bool, error) {
+func (repository *ProductSearchRepository) UpdateQuantities(productId int64, quantity int64) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
@@ -244,11 +244,7 @@ func (repository *ProductSearchRepository) UpdateQuantities(productId int64, qua
 	defer stmt.Close()
 
 	var res sql.Result
-	if increased {
-		res, err = stmt.Exec(quantity, productId)
-	} else {
-		res, err = stmt.Exec(-quantity, productId)
-	}
+	res, err = stmt.Exec(quantity, productId)
 	if err != nil {
 		return false, err
 	}

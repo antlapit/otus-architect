@@ -22,9 +22,9 @@ func main() {
 
 		kafka := InitKafkaDefault()
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
-		eventWriter := kafka.StartNewWriter(event.TOPIC_WAREHOUSE, eventsMarshaller)
+		warehouseEventWriter := kafka.StartNewWriter(event.TOPIC_WAREHOUSE, eventsMarshaller)
 
-		var app = core.NewWarehouseApplication(db, eventWriter)
+		var app = core.NewWarehouseApplication(db, warehouseEventWriter)
 		initListeners(kafka, eventsMarshaller, app)
 		initApi(publicGroup, secureGroup, app)
 		engine.Run(":8009")
@@ -35,7 +35,7 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Wa
 	f := func(id string, eventType string, data interface{}) error {
 		return app.ProcessEvent(id, eventType, data)
 	}
-	kafka.StartNewEventReader(event.TOPIC_WAREHOUSE, "warehouse-service", marshaller, f)
+	kafka.StartNewEventReader(event.TOPIC_ORDERS, "warehouse-service", marshaller, f)
 	kafka.StartNewEventReader(event.TOPIC_PRODUCTS, "warehouse-service", marshaller, f)
 }
 
@@ -51,10 +51,10 @@ func initApi(publicGroup *gin.RouterGroup, secureGroup *gin.RouterGroup, app *co
 }
 
 func initPrivatePrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
-	managePricesRoute := group.Group("/quantities")
-	singleManageProductRoute := managePricesRoute.Group("/by-product-id/:productId")
+	managePricesRoute := group.Group("/store-items")
+	singleManageProductRoute := managePricesRoute.Group("/by-product-id/:productId/modify-quantities")
 	singleManageProductRoute.Use(GenericIdExtractor("productId"))
-	singleManageProductRoute.PUT("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+	singleManageProductRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		productId := context.GetInt64("productId")
 		var c ProductQuantityChangeData
 		if err := context.ShouldBindJSON(&c); err != nil {
@@ -62,15 +62,15 @@ func initPrivatePrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
 			return nil, nil, true
 		}
 
-		res, err := app.SubmitProductQuantityChanged(productId, c.Quantity, c.Increase)
+		err := app.ModifyProductChange(productId, c.QuantityChange)
 		return gin.H{
-			"eventId": res,
+			"success": true,
 		}, err, false
 	}))
 }
 
 func initPublicPrices(group *gin.RouterGroup, app *core.WarehouseApplication) {
-	pricesRoute := group.Group("/quantities")
+	pricesRoute := group.Group("/store-items")
 
 	productsRoute := pricesRoute.Group("/by-product-id")
 	singleProductRoute := productsRoute.Group("/:productId")
@@ -109,6 +109,5 @@ func checkAdminPermissions(context *gin.Context) {
 }
 
 type ProductQuantityChangeData struct {
-	Quantity int64 `json:"quantity" binding:"required"`
-	Increase bool  `json:"increase" binding:"required"`
+	QuantityChange int64 `json:"quantityChange" binding:"required"`
 }

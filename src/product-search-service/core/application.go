@@ -100,7 +100,7 @@ func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged
 
 func (app *ProductSearchApplication) modifyQuantities(data event.ProductsBatchQuantityChanged) error {
 	for _, change := range data.Changes {
-		_, err := app.productSearchRepository.UpdateQuantities(change.ProductId, change.Quantity, change.Increase)
+		_, err := app.productSearchRepository.UpdateQuantities(change.ProductId, change.Quantity)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package toolbox
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
@@ -43,16 +44,28 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 
 	log.Printf("Kafka broker (address %s)(topic %s)(consumer group %s) started", address, topic, consumerGroup)
 
+	ctx := context.Background()
 	for {
-		m, err := r.FetchMessage(context.Background())
+		lastSuccessKey := ""
+		m, err := r.FetchMessage(ctx)
 		if err != nil {
 			break
 		}
 		key, value := string(m.Key), string(m.Value)
 		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, key, value)
-		err = handler(key, value)
+		if lastSuccessKey == key {
+			// TODO почему-то kafka не всегда принимает CommitMessage. Мб сделать нормальный inbox
+			fmt.Printf("duplicate message at offset %d: %s = %s\n. Skipping", m.Offset, key, value)
+		} else {
+			err = handler(key, value)
+		}
 		if err == nil {
-			r.CommitMessages(context.Background(), m)
+			err = r.CommitMessages(ctx, m)
+			if err != nil {
+				log.Fatal("error on commiting message %s", err)
+			} else {
+				lastSuccessKey = key
+			}
 		}
 	}
 
@@ -102,16 +115,23 @@ func (this *EventWriter) WriteEvent(eventType string, data interface{}) (string,
 }
 
 func (this *EventWriter) write(key string, value string) error {
-	err := this.writer.WriteMessages(context.Background(),
-		kafka.Message{
-			Key:   []byte(key),
-			Value: []byte(value),
+	return retry.Do(
+		func() error {
+			err := this.writer.WriteMessages(context.Background(),
+				kafka.Message{
+					Key:   []byte(key),
+					Value: []byte(value),
+				},
+			)
+			if err != nil {
+				log.Println("failed to write messages:", err)
+			} else {
+				log.Print(fmt.Sprintf("Submitted message eventId=%s, message=%s", key, value))
+			}
+			return err
 		},
 	)
-	if err != nil {
-		log.Println("failed to write messages:", err)
-	}
-	return err
+
 }
 
 func LoadKafkaEnvironmentConfig() *KafkaEnvironmentConfig {
