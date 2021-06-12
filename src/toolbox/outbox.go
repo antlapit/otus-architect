@@ -46,6 +46,9 @@ func (outbox *Outbox) SubmitEvent(tx *sql.Tx, eventType string, data interface{}
 
 func (outbox *Outbox) SendAwaiting(limit int64) error {
 	db := outbox.DB
+
+	// TODO locking
+
 	stmt, err := db.Prepare(
 		`SELECT id, data 
 				FROM event_message 

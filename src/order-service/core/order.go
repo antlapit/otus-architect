@@ -140,9 +140,7 @@ func (repository *OrderRepository) GetByIdInTransaction(tx *sql.Tx, orderId int6
 	defer stmt.Close()
 
 	var order Order
-	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date, &order.WarehouseConfirmed, &order.DeliveryConfirmed)
-	order.Total = big.NewFloat(totalVal.Float64).String()
+	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &order.Total, &order.Date, &order.WarehouseConfirmed, &order.DeliveryConfirmed)
 	if err != nil {
 		// constraints
 		return Order{}, &OrderNotFoundError{id: orderId}
@@ -172,12 +170,10 @@ func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, er
 		var result = make([]Order, 0)
 		for rows.Next() {
 			var order Order
-			var totalVal sql.NullFloat64
-			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
+			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &order.Total, &order.Date)
 			if err != nil {
 				return []Order{}, err
 			}
-			order.Total = big.NewFloat(totalVal.Float64).String()
 			result = append(result, order)
 		}
 		return result, nil

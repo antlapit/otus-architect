@@ -20,13 +20,12 @@ func main() {
 	} else {
 		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
-		kafka := InitKafkaDefault()
+		kafka := InitKafkaWithSqlInbox(db)
 
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var billingEventWriter = kafka.StartNewWriter(event.TOPIC_BILLING, eventsMarshaller)
-		var orderEventWriter = kafka.StartNewWriter(event.TOPIC_ORDERS, eventsMarshaller)
-		var billingCore = core.NewBillingApplication(db, billingEventWriter, orderEventWriter)
+		var eventWriter = kafka.StartNewWriter(event.TOPIC_BILLING, eventsMarshaller)
+		var billingCore = core.NewBillingApplication(db, eventWriter)
 
 		initBillingApi(secureGroup, billingCore)
 		initListeners(kafka, eventsMarshaller, billingCore)

@@ -2,6 +2,7 @@ package toolbox
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/avast/retry-go"
 	"github.com/segmentio/kafka-go"
@@ -16,6 +17,7 @@ type KafkaEnvironmentConfig struct {
 
 type KafkaServer struct {
 	broker *KafkaEnvironmentConfig
+	inbox  Inbox
 }
 
 type MessageHandler func(string, string) error
@@ -46,26 +48,29 @@ func (this *KafkaServer) startNewReader(topic string, consumerGroup string, hand
 
 	ctx := context.Background()
 	for {
-		lastSuccessKey := ""
 		m, err := r.FetchMessage(ctx)
 		if err != nil {
 			break
 		}
 		key, value := string(m.Key), string(m.Value)
 		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, key, value)
-		if lastSuccessKey == key {
-			// TODO почему-то kafka не всегда принимает CommitMessage. Мб сделать нормальный inbox
+		if this.inbox.contains(key) {
 			fmt.Printf("duplicate message at offset %d: %s = %s\n. Skipping", m.Offset, key, value)
 		} else {
 			err = handler(key, value)
 		}
 		if err == nil {
-			err = r.CommitMessages(ctx, m)
+			err = this.inbox.register(key)
 			if err != nil {
-				log.Fatal("error on commiting message %s", err)
+				log.Fatal("error on submitting message to inbox %s", err)
 			} else {
-				lastSuccessKey = key
+				err = r.CommitMessages(ctx, m)
+				if err != nil {
+					log.Fatal("error on commiting message %s", err)
+				}
 			}
+		} else {
+			log.Fatal("error on processing message %s", err)
 		}
 	}
 
@@ -142,9 +147,16 @@ func LoadKafkaEnvironmentConfig() *KafkaEnvironmentConfig {
 }
 
 func InitKafkaDefault() *KafkaServer {
-	return InitKafka(LoadKafkaEnvironmentConfig())
+	return InitKafka(LoadKafkaEnvironmentConfig(), NewNoOpInbox())
 }
 
-func InitKafka(broker *KafkaEnvironmentConfig) *KafkaServer {
-	return &KafkaServer{broker: broker}
+func InitKafkaWithSqlInbox(db *sql.DB) *KafkaServer {
+	return InitKafka(LoadKafkaEnvironmentConfig(), NewSqlInbox(db))
+}
+
+func InitKafka(broker *KafkaEnvironmentConfig, inbox Inbox) *KafkaServer {
+	return &KafkaServer{
+		broker: broker,
+		inbox:  inbox,
+	}
 }

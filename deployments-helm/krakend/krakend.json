@@ -350,7 +350,7 @@
     {
       "endpoint": "/me/orders/{orderId}",
       "method": "GET",
-      "output_encoding": "no-op",
+      "output_encoding": "json",
       "headers_to_pass": [
         "*"
       ],
@@ -359,8 +359,60 @@
           "host": [
             "http://order-service:8003"
           ],
-          "encoding": "no-op",
-          "url_pattern": "/users/{JWT.sub}/orders/{orderId}"
+          "encoding": "json",
+          "url_pattern": "/users/{JWT.sub}/orders/{orderId}",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "order",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "orderError"
+            }
+          }
+        },
+        {
+          "host": [
+            "http://billing-service:8002"
+          ],
+          "encoding": "json",
+          "url_pattern": "/accounts/by-user-id/{JWT.sub}/bills-by-order-id/{orderId}",
+          "group": "bill",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "order-bill",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "billingError"
+            }
+          }
+        },
+        {
+          "host": [
+            "http://delivery-service:8008"
+          ],
+          "encoding": "json",
+          "url_pattern": "/deliveries/by-user-id/{JWT.sub}/by-order-id/{orderId}",
+          "group": "delivery",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "order-delivery",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "deliveryError"
+            }
+          }
         }
       ],
       "extra_config": {
@@ -763,7 +815,19 @@
           ],
           "encoding": "json",
           "url_pattern": "/prices/by-product-id/{productId}",
-          "group": "prices"
+          "group": "prices",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "productPrices",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "pricesError"
+            }
+          }
         },
         {
           "host": [
@@ -771,7 +835,19 @@
           ],
           "encoding": "json",
           "url_pattern": "/store-items/by-product-id/{productId}",
-          "group": "store"
+          "group": "store",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "productStore",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "storeError"
+            }
+          }
         }
       ]
     },
