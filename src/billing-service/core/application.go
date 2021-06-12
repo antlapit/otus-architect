@@ -5,116 +5,51 @@ import (
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
-	"github.com/prometheus/common/log"
-	"math/big"
 )
 
 type BillingApplication struct {
 	accountRepository  *AccountRepository
-	billRepository     *BillRepository
 	BillingEventWriter *toolbox.EventWriter
+	OrderEventWriter   *toolbox.EventWriter
 }
 
-func NewBillingApplication(db *sql.DB, billingEventWriter *toolbox.EventWriter) *BillingApplication {
+func NewBillingApplication(db *sql.DB, billingEventWriter *toolbox.EventWriter, orderEventWriter *toolbox.EventWriter) *BillingApplication {
 	var accountRepository = &AccountRepository{DB: db}
-	var billRepository = &BillRepository{DB: db}
 
 	return &BillingApplication{
 		accountRepository:  accountRepository,
-		billRepository:     billRepository,
 		BillingEventWriter: billingEventWriter,
+		OrderEventWriter:   orderEventWriter,
 	}
 }
 
-func (c *BillingApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (c *BillingApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.UserCreated:
-		c.createEmptyAccount(data.(event.UserCreated))
-		break
+		return c.createEmptyAccount(data.(event.UserCreated))
 	case event.MoneyAdded:
-		c.addMoney(data.(event.MoneyAdded))
-		break
-	case event.PaymentConfirmed:
-		c.confirmPayment(data.(event.PaymentConfirmed))
-		break
-	case event.PaymentCompleted:
-		c.completePayment(data.(event.PaymentCompleted))
-		break
+		return c.addMoney(data.(event.MoneyAdded))
 	case event.OrderConfirmed:
-		c.createBillForOrder(data.(event.OrderConfirmed))
-		break
+		return c.payOrder(data.(event.OrderConfirmed))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (c *BillingApplication) createEmptyAccount(data event.UserCreated) {
-	c.accountRepository.CreateIfNotExists(data.UserId)
+func (c *BillingApplication) createEmptyAccount(data event.UserCreated) error {
+	_, err := c.accountRepository.CreateAccountIfNotExists(data.UserId)
+	return err
 }
 
-func (c *BillingApplication) addMoney(data event.MoneyAdded) {
-	c.accountRepository.AddMoneyByUserId(data.UserId, data.MoneyAdded)
-}
-
-func (c *BillingApplication) confirmPayment(data event.PaymentConfirmed) {
-	bill, err := c.billRepository.GetById(data.BillId)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if bill.Status != "CREATED" {
-		return
-	}
-	billTotal, _ := new(big.Float).SetString(bill.Total)
-	res, err := c.accountRepository.AddMoneyById(data.AccountId, new(big.Float).Neg(billTotal))
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if !res {
-		log.Error("Not enough money or something happened")
-		return
-	}
-	res, err = c.billRepository.Confirm(bill.Id)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	if !res {
-		log.Error("Cannot confirm payment")
-	}
-	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_COMPLETED, event.PaymentCompleted{
-		BillId:    bill.Id,
-		OrderId:   bill.OrderId,
-		AccountId: bill.AccountId,
-	})
-	if err != nil {
-		log.Error("Error confirming payment")
-	} else {
-		log.Info("Submitted payment completed event %s", eventId)
-	}
-}
-
-func (c *BillingApplication) completePayment(data event.PaymentCompleted) {
-	bill, err := c.billRepository.GetById(data.BillId)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if bill.Status != "CONFIRMED" {
-		return
-	}
-	res, err := c.billRepository.Complete(bill.Id)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	if !res {
-		log.Error("Cannot complete payment")
-	}
+func (c *BillingApplication) addMoney(data event.MoneyAdded) error {
+	_, err := c.accountRepository.AddMoneyByUserId(data.UserId, data.MoneyAdded)
+	return err
 }
 
 func (c *BillingApplication) GetAccount(userId int64) (Account, error) {
-	return c.accountRepository.GetByUserId(userId)
+	return c.accountRepository.GetAccountByUserId(userId)
 }
 
 func (c *BillingApplication) SubmitMoneyAdding(userId int64, req AddMoneyRequest) (interface{}, error) {
@@ -125,16 +60,16 @@ func (c *BillingApplication) SubmitMoneyAdding(userId int64, req AddMoneyRequest
 }
 
 func (c *BillingApplication) GetAllBillsByUserId(userId int64) ([]Bill, error) {
-	return c.billRepository.GetByUserId(userId)
+	return c.accountRepository.GetAllBillsByUserId(userId)
 }
 
 func (c *BillingApplication) GetBill(userId int64, billId int64) (Bill, error) {
-	bill, err := c.billRepository.GetById(billId)
+	bill, err := c.accountRepository.GetBillById(billId)
 	if err != nil {
 		return Bill{}, err
 	}
 
-	account, err := c.accountRepository.GetByUserId(userId)
+	account, err := c.accountRepository.GetAccountByUserId(userId)
 	if err != nil || account.Id != bill.AccountId {
 		return Bill{}, err
 	}
@@ -142,41 +77,49 @@ func (c *BillingApplication) GetBill(userId int64, billId int64) (Bill, error) {
 	return bill, nil
 }
 
-func (c *BillingApplication) SubmitConfirmPaymentFromAccount(userId int64, billId int64) (interface{}, error) {
-	account, err := c.accountRepository.GetByUserId(userId)
+func (c *BillingApplication) GetBillByOrderId(userId int64, orderId int64) (Bill, error) {
+	bill, err := c.accountRepository.GetByOrderId(nil, orderId)
 	if err != nil {
-		return nil, err
+		return Bill{}, err
 	}
 
-	bill, err := c.billRepository.GetById(billId)
+	account, err := c.accountRepository.GetAccountByUserId(userId)
 	if err != nil || account.Id != bill.AccountId {
-		return nil, err
+		return Bill{}, err
 	}
 
-	eventId, err := c.BillingEventWriter.WriteEvent(event.EVENT_PAYMENT_CONFIRMED, event.PaymentConfirmed{
-		BillId:    bill.Id,
-		OrderId:   bill.OrderId,
-		AccountId: bill.AccountId,
-	})
-	if err != nil {
-		log.Error("Error confirming payment")
-		return nil, err
-	} else {
-		log.Info("Submitted payment completed event %s", eventId)
-		return eventId, nil
-	}
+	return bill, nil
 }
 
-func (c *BillingApplication) createBillForOrder(data event.OrderConfirmed) {
-	account, err := c.accountRepository.GetByUserId(data.UserId)
+func (c *BillingApplication) payOrder(data event.OrderConfirmed) error {
+	err := toolbox.ExecuteInTransaction(c.accountRepository.DB,
+		func(tx *sql.Tx) error {
+			account, err := c.accountRepository.GetAccountByUserId(data.UserId)
+			if err != nil {
+				return err
+			}
+			bill, err := c.accountRepository.payOrder(tx, account.Id, data.OrderId, data.Total)
+			if err != nil {
+				return err
+			}
+			// TODO outbox
+			_, err = c.OrderEventWriter.WriteEvent(event.EVENT_PAYMENT_COMPLETED, event.PaymentCompleted{
+				BillId:    bill.Id,
+				OrderId:   bill.OrderId,
+				AccountId: bill.AccountId,
+			})
+
+			return err
+		},
+	)
+
 	if err != nil {
-		log.Error("Error creating order")
-		return
+		_, err := c.OrderEventWriter.WriteEvent(event.EVENT_PAYMENT_REJECTED, event.PaymentRejected{
+			OrderId: data.OrderId,
+		})
+		return err
 	}
-	_, err = c.billRepository.CreateIfNotExists(account.Id, data.OrderId, data.Total)
-	if err != nil {
-		log.Error(err.Error())
-	}
+	return nil
 }
 
 type AddMoneyRequest struct {

@@ -24,7 +24,7 @@ func NewPriceService() *PriceService {
 	return &PriceService{PriceServiceUrl: priceServiceUrl}
 }
 
-func (s *PriceService) GetPrice(productId int64, quantity int64) (*big.Float, *big.Float, *big.Float, error) {
+func (s *PriceService) GetPrice(productId int64, quantity int64) (basePrice *big.Float, calcPrice *big.Float, total *big.Float, err error) {
 	client := http.Client{
 		Timeout: time.Second * 60, // Timeout after 60 seconds
 	}
@@ -68,8 +68,8 @@ func (s *PriceService) GetPrice(productId int64, quantity int64) (*big.Float, *b
 	}
 
 	itemCalcResult := calculationResult.Items[productId]
-	basePrice, _ := new(big.Float).SetString(itemCalcResult.BasePrice)
-	calcPrice, _ := new(big.Float).SetString(itemCalcResult.CalcPrice)
-	total, _ := new(big.Float).SetString(itemCalcResult.Total)
+	basePrice, _ = new(big.Float).SetString(itemCalcResult.BasePrice)
+	calcPrice, _ = new(big.Float).SetString(itemCalcResult.CalcPrice)
+	total, _ = new(big.Float).SetString(itemCalcResult.Total)
 	return basePrice, calcPrice, total, nil
 }

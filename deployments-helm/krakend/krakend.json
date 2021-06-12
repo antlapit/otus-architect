@@ -286,37 +286,6 @@
       }
     },
     {
-      "endpoint": "/me/bills/{billId}/confirm",
-      "method": "POST",
-      "output_encoding": "no-op",
-      "headers_to_pass": [
-        "*"
-      ],
-      "backend": [
-        {
-          "host": [
-            "http://billing-service:8002"
-          ],
-          "encoding": "no-op",
-          "url_pattern": "/accounts/by-user-id/{JWT.sub}/bills/{billId}/confirm"
-        }
-      ],
-      "extra_config": {
-        "github.com/devopsfaith/krakend-jose/validator": {
-          "alg": "RS256",
-          "jwk-url": "http://auth-service:8001/jwk",
-          "disable_jwk_security": true,
-          "key_identify_strategy": "kid",
-          "audience": [
-            "http://arch.homework"
-          ],
-          "issuer": "http://arch.homework",
-          "roles": ["USER"],
-          "roles_key": "auth_role"
-        }
-      }
-    },
-    {
       "endpoint": "/me/orders",
       "method": "POST",
       "output_encoding": "no-op",
@@ -793,7 +762,16 @@
             "http://price-service:8006"
           ],
           "encoding": "json",
-          "url_pattern": "/prices/by-product-id/{productId}"
+          "url_pattern": "/prices/by-product-id/{productId}",
+          "group": "prices"
+        },
+        {
+          "host": [
+            "http://warehouse-service:8009"
+          ],
+          "encoding": "json",
+          "url_pattern": "/store-items/by-product-id/{productId}",
+          "group": "store"
         }
       ]
     },
@@ -850,6 +828,40 @@
           "url_pattern": "/products/find-by-filter"
         }
       ]
+    },
+    {
+      "endpoint": "/admin/store-items/by-product-id/{productId}/modify-quantities",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://warehouse-service:8009"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/manage/store-items/by-product-id/{productId}/modify-quantities"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["ADMIN"],
+          "roles_key": "auth_role"
+        }
+      }
     }
   ]
 }

@@ -25,7 +25,8 @@ func main() {
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
 		var billingEventWriter = kafka.StartNewWriter(event.TOPIC_BILLING, eventsMarshaller)
-		var billingCore = core.NewBillingApplication(db, billingEventWriter)
+		var orderEventWriter = kafka.StartNewWriter(event.TOPIC_ORDERS, eventsMarshaller)
+		var billingCore = core.NewBillingApplication(db, billingEventWriter, orderEventWriter)
 
 		initBillingApi(secureGroup, billingCore)
 		initListeners(kafka, eventsMarshaller, billingCore)
@@ -34,8 +35,8 @@ func main() {
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.BillingApplication) {
-	f := func(id string, eventType string, data interface{}) {
-		app.ProcessEvent(id, eventType, data)
+	f := func(id string, eventType string, data interface{}) error {
+		return app.ProcessEvent(id, eventType, data)
 	}
 	kafka.StartNewEventReader(event.TOPIC_USERS, "billing-service", marshaller, f)
 	kafka.StartNewEventReader(event.TOPIC_BILLING, "billing-service", marshaller, f)
@@ -70,6 +71,7 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 		res, err := app.GetAllBillsByUserId(userId)
 		return res, err, false
 	}))
+
 	singleBillRoute := billsRoute.Group("/:billId")
 	singleBillRoute.Use(GenericIdExtractor("billId"))
 	singleBillRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
@@ -77,12 +79,14 @@ func initBillingApi(secureGroup *gin.RouterGroup, app *core.BillingApplication) 
 		res, err := app.GetBill(userId, billId)
 		return res, err, false
 	}))
-	singleBillRoute.POST("/confirm", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
-		userId, billId := context.GetInt64("userId"), context.GetInt64("billId")
-		res, err := app.SubmitConfirmPaymentFromAccount(userId, billId)
-		return gin.H{
-			"eventId": res,
-		}, err, false
+
+	billByOrder := singleUserRoute.Group("/bills-by-order-id/:orderId")
+	billByOrder.Use(GenericIdExtractor("orderId"))
+	billByOrder.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+
+		res, err := app.GetBillByOrderId(userId, orderId)
+		return res, err, false
 	}))
 }
 

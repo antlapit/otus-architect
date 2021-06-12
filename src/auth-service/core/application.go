@@ -22,24 +22,22 @@ func NewAuthApplication(db *sql.DB, writer *EventWriter) *AuthApplication {
 	}
 }
 
-func (app *AuthApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *AuthApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.UserCreated:
-		app.createUser(data.(event.UserCreated))
-		break
+		return app.createUser(data.(event.UserCreated))
 	case event.AdminCreated:
-		app.createAdmin(data.(event.AdminCreated))
-		break
+		return app.createAdmin(data.(event.AdminCreated))
 	case event.UserChangePassword:
-		app.changePassword(data.(event.UserChangePassword))
-		break
+		return app.changePassword(data.(event.UserChangePassword))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (app *AuthApplication) createUser(user event.UserCreated) {
+func (app *AuthApplication) createUser(user event.UserCreated) error {
 	_, err := app.repository.CreateOrUpdate(UserData{
 		Id:       user.UserId,
 		Username: user.Username,
@@ -51,9 +49,10 @@ func (app *AuthApplication) createUser(user event.UserCreated) {
 	} else {
 		fmt.Printf("User %s successfully created", user.Username)
 	}
+	return err
 }
 
-func (app *AuthApplication) createAdmin(user event.AdminCreated) {
+func (app *AuthApplication) createAdmin(user event.AdminCreated) error {
 	_, err := app.repository.CreateOrUpdate(UserData{
 		Id:       user.UserId,
 		Username: user.Username,
@@ -65,17 +64,22 @@ func (app *AuthApplication) createAdmin(user event.AdminCreated) {
 	} else {
 		fmt.Printf("User %s successfully created", user.Username)
 	}
+	return err
 }
 
-func (app *AuthApplication) changePassword(data event.UserChangePassword) {
+func (app *AuthApplication) changePassword(data event.UserChangePassword) error {
 	userName := data.Username
 	user, err := app.repository.GetByUsername(userName)
 
 	if err == nil {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data.OldPassword)) == nil {
 			_, err = app.repository.UpdatePassword(user.Id, data.NewPassword)
+			return err
 		}
+	} else {
+		return err
 	}
+	return nil
 }
 
 func (app *AuthApplication) GetByUsername(userName string) (UserData, error) {

@@ -22,7 +22,7 @@ func NewEventMarshaller(types map[string]interface{}) *EventMarshaller {
 	return &EventMarshaller{Types: types}
 }
 
-type EventHandler func(id string, eventType string, data interface{})
+type EventHandler func(id string, eventType string, data interface{}) error
 
 func (this *EventMarshaller) UnmarshallToType(input string) (string, string, interface{}, error) {
 	var msg json.RawMessage
@@ -95,5 +95,5 @@ func ToBigFloatHookFunc() mapstructure.DecodeHookFunc {
 }
 
 type EventProcessor interface {
-	ProcessEvent(id string, eventType string, data interface{})
+	ProcessEvent(id string, eventType string, data interface{}) error
 }

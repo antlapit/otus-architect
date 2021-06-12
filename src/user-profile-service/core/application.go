@@ -35,30 +35,31 @@ func (app *UserApplication) SubmitProfileChangeEvent(userId int64, userData User
 	})
 }
 
-func (app *UserApplication) ProcessEvent(id string, eventType string, data interface{}) {
+func (app *UserApplication) ProcessEvent(id string, eventType string, data interface{}) error {
 	fmt.Printf("Processing eventId=%s, eventType=%s\n", id, eventType)
 	switch data.(type) {
 	case event.UserCreated:
-		app.createEmptyUser(data.(event.UserCreated))
-		break
+		return app.createEmptyUser(data.(event.UserCreated))
 	case event.UserProfileChanged:
-		app.changeProfile(data.(event.UserProfileChanged))
-		break
+		return app.changeProfile(data.(event.UserProfileChanged))
 	default:
 		fmt.Printf("Skipping event eventId=%s", id)
 	}
+	return nil
 }
 
-func (app *UserApplication) createEmptyUser(data event.UserCreated) {
-	app.repository.CreateIfNotExists(data.UserId)
+func (app *UserApplication) createEmptyUser(data event.UserCreated) error {
+	_, err := app.repository.CreateIfNotExists(data.UserId)
+	return err
 }
 
-func (app *UserApplication) changeProfile(data event.UserProfileChanged) {
-	app.repository.CreateOrUpdate(data.UserId, UserData{
+func (app *UserApplication) changeProfile(data event.UserProfileChanged) error {
+	_, err := app.repository.CreateOrUpdate(data.UserId, UserData{
 		Id:        data.UserId,
 		FirstName: data.FirstName,
 		LastName:  data.LastName,
 		Email:     data.Email,
 		Phone:     data.Phone,
 	})
+	return err
 }

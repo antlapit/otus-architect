@@ -1,6 +1,8 @@
 package toolbox
 
 import (
+	"context"
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -82,4 +84,30 @@ func NumericPlaceholdersWithSuffix(startNum int, count int, suffix string) strin
 	}
 
 	return builder.String()
+}
+
+func rollback(tx *sql.Tx, err error) error {
+	if rbErr := tx.Rollback(); rbErr != nil {
+		return fmt.Errorf("tx err: %v, rb err: %v", err, rbErr)
+	}
+	return nil
+}
+
+type TransactionQuery func(tx *sql.Tx) error
+
+func ExecuteInTransaction(db *sql.DB, queries ...TransactionQuery) error {
+	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, query := range queries {
+		err = query(tx)
+		if err != nil {
+			rollback(tx, err)
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

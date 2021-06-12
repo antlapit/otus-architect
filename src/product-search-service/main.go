@@ -31,10 +31,11 @@ func main() {
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.ProductSearchApplication) {
-	f := func(id string, eventType string, data interface{}) {
-		app.ProcessEvent(id, eventType, data)
+	f := func(id string, eventType string, data interface{}) error {
+		return app.ProcessEvent(id, eventType, data)
 	}
 	kafka.StartNewEventReader(event.TOPIC_PRODUCTS, "product-search-service", marshaller, f)
+	kafka.StartNewEventReader(event.TOPIC_WAREHOUSE, "product-search-service", marshaller, f)
 }
 
 func initApi(publicGroup *gin.RouterGroup, app *core.ProductSearchApplication) {

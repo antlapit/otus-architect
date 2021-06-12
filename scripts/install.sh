@@ -12,6 +12,8 @@ helm install notification-service-release deployments-helm/notification-service
 helm install product-service-release deployments-helm/product-service
 helm install prices-service-release deployments-helm/price-service
 helm install product-search-service-release deployments-helm/product-search-service
+helm install warehouse-service-release deployments-helm/warehouse-service
+helm install delivery-service-release deployments-helm/delivery-service
 
 helm install krakend deployments-helm/krakend
 
@@ -22,3 +24,5 @@ helm install postgres-exporter-order prometheus-community/prometheus-postgres-ex
 helm install postgres-exporter-billing prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-billing.yaml
 helm install postgres-exporter-notification prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-notification.yaml
 helm install postgres-exporter-product-search prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product-search.yaml
+helm install postgres-exporter-warehouse prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-warehouse.yaml
+helm install postgres-exporter-delivery prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-delivery.yaml

@@ -1,0 +1,46 @@
+FROM golang:alpine AS builder
+
+# Set necessary environmet variables needed for our image
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+# Move to working directory /build
+WORKDIR /build
+
+# Copy and download dependency using go mod
+COPY api /api
+COPY toolbox /toolbox
+
+COPY warehouse-service/go.mod /warehouse-service/go.mod
+COPY warehouse-service/go.sum /warehouse-service/go.sum
+
+WORKDIR /warehouse-service
+
+RUN go mod download
+
+WORKDIR /
+
+COPY warehouse-service /warehouse-service
+
+WORKDIR /warehouse-service
+
+# Build the application
+RUN go build -o main .
+
+WORKDIR /dist
+
+# Copy binary from build to main folder
+RUN cp /warehouse-service/main .
+
+# Build a small image
+FROM scratch
+
+COPY --from=builder /dist/main /
+
+COPY keys /keys
+COPY warehouse-service/migrations /migrations
+
+# Command to run
+ENTRYPOINT ["/main"]

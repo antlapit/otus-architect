@@ -193,6 +193,125 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "Add Money",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"money\": \"1000000000000\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/add-money",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"add-money"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Updated Profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"var maxNumberOfTries = 3;",
+											"var sleepBetweenTries = 5000;",
+											"",
+											"if (!pm.environment.get(\"collection_tries\")) {",
+											"    pm.environment.set(\"collection_tries\", 1);",
+											"}",
+											"",
+											"var jsonData = pm.response.json();",
+											"var parsedMoney = parseInt(jsonData.money);",
+											"if ((parsedMoney == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
+											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
+											"     pm.environment.set(\"collection_tries\", tries + 1);",
+											"     setTimeout(function() {}, sleepBetweenTries);",
+											"     postman.setNextRequest(request.name);",
+											" } else {",
+											"     pm.environment.unset(\"collection_tries\");",
+											"",
+											"    pm.test(\"Checking profile\", function () {",
+											"        pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username'));",
+											"        pm.expect(parseInt(jsonData.money)).to.gt(0);",
+											"    });",
+											" }"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
+									"protocol": "http",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"otusapp",
+										"alapitskii",
+										"me",
+										"profile"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -514,7 +633,7 @@
 											"     pm.environment.unset(\"collection_tries\");",
 											"",
 											"    pm.test(\"Checking order\", function () {",
-											"        pm.expect(jsonData.status).to.eql('CONFIRMED');",
+											"        pm.expect(jsonData.status).to.eql('PREPARED');",
 											"        pm.collectionVariables.set(\"lastConfirmedOrderId\", pm.collectionVariables.get(\"orderId\"));",
 											"    });",
 											" }",
@@ -554,198 +673,12 @@
 								}
 							},
 							"response": []
-						},
-						{
-							"name": "Get Notifications",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"var maxNumberOfTries = 10;",
-											"var sleepBetweenTries = 5000;",
-											"",
-											"if (!pm.environment.get(\"collection_tries\")) {",
-											"    pm.environment.set(\"collection_tries\", 1);",
-											"}",
-											"",
-											"",
-											"var jsonData = pm.response.json();",
-											"if ((jsonData.length == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
-											"",
-											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
-											"     pm.environment.set(\"collection_tries\", tries + 1);",
-											"     setTimeout(function() {}, sleepBetweenTries);",
-											"     postman.setNextRequest(request.name);",
-											" } else {",
-											"     pm.environment.unset(\"collection_tries\");",
-											"",
-											"    pm.test(\"Checking notifications\", function () {",
-											"        pm.expect(jsonData[0].orderId).to.eql(pm.collectionVariables.get('orderId'));",
-											"        pm.expect(jsonData[0].eventType).to.eql('order.confirmed');",
-											"    });",
-											" }"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/notifications",
-									"protocol": "http",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"notifications"
-									]
-								}
-							},
-							"response": []
 						}
 					]
 				},
 				{
 					"name": "PAYMENT",
 					"item": [
-						{
-							"name": "Add Money",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"money\": \"{{orderAmount}}\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/add-money",
-									"protocol": "http",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"add-money"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Updated Profile",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"var maxNumberOfTries = 3;",
-											"var sleepBetweenTries = 5000;",
-											"",
-											"if (!pm.environment.get(\"collection_tries\")) {",
-											"    pm.environment.set(\"collection_tries\", 1);",
-											"}",
-											"",
-											"var jsonData = pm.response.json();",
-											"var parsedMoney = parseInt(jsonData.money);",
-											"if ((parsedMoney == 0) && (pm.environment.get(\"collection_tries\") < maxNumberOfTries)) {",
-											"     var tries = parseInt(pm.environment.get(\"collection_tries\"), 10);",
-											"     pm.environment.set(\"collection_tries\", tries + 1);",
-											"     setTimeout(function() {}, sleepBetweenTries);",
-											"     postman.setNextRequest(request.name);",
-											" } else {",
-											"     pm.environment.unset(\"collection_tries\");",
-											"",
-											"    pm.test(\"Checking profile\", function () {",
-											"        pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('username'));",
-											"        pm.expect(parseInt(jsonData.money)).to.eql(parseInt(pm.collectionVariables.get('orderAmount')));",
-											"    });",
-											" }"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/profile",
-									"protocol": "http",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"profile"
-									]
-								}
-							},
-							"response": []
-						},
 						{
 							"name": "Get Bills",
 							"event": [
@@ -810,52 +743,6 @@
 										"alapitskii",
 										"me",
 										"bills"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Confirm Payment",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "http://{{baseUrl}}/otusapp/alapitskii/me/bills/{{billId}}/confirm",
-									"protocol": "http",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"otusapp",
-										"alapitskii",
-										"me",
-										"bills",
-										"{{billId}}",
-										"confirm"
 									]
 								}
 							},
