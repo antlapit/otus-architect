@@ -9,7 +9,6 @@ import (
 	_ "github.com/lib/pq"
 	"net/http"
 	"os"
-	"time"
 )
 
 func main() {
@@ -85,8 +84,8 @@ func errorHandler(context *gin.Context) {
 }
 
 type DeliveryChangeData struct {
-	Address string     `json:"address" binding:"required"`
-	Date    *time.Time `json:"date" binding:"required"`
+	Address string `json:"address" binding:"required"`
+	Date    string `json:"date" binding:"required"`
 }
 
 func checkUserPermissions(context *gin.Context) {

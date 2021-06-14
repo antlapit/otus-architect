@@ -39,12 +39,12 @@ func (error *DeliveryInvalidError) Error() string {
 	return error.message
 }
 
-func (repository *DeliveryRepository) Create(orderId int64, address string, date *time.Time) (bool, error) {
+func (repository *DeliveryRepository) Create(orderId int64, address string, date string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`INSERT INTO delivery(order_id, address, date) 
-				VALUES($1, $2, $3, $4, $5)
+				VALUES($1, $2, $3)
 				ON CONFLICT (order_id) DO UPDATE
 				SET address = $2, date = $3`,
 	)
@@ -211,18 +211,20 @@ func (repository *DeliveryRepository) updateCourier(tx *sql.Tx, orderId int64, c
 func (repository *DeliveryRepository) getFreeCourierOnDate(tx *sql.Tx, date *time.Time) (int64, error) {
 	q := `
 		WITH reserved_couriers as (
-			SELECT d.courier_id, count(1) as orders
-			FROM delivery d
-			WHERE date_part('day', d.date) = date_part('day', $1)
-			  AND date_part('month', d.date) = date_part('month', $1)
-			  AND date_part('year', d.date) = date_part('year', $1)
-			GROUP BY d.courier_id
-		)
-		SELECT c.courier_id
-		FROM courier c
-				 LEFT JOIN reserved_couriers ON c.courier_id = reserved_couriers.courier_id
-		WHERE c.max_per_day > reserved_couriers.orders
-		LIMIT 1
+    SELECT d.courier_id, count(1) as orders
+    FROM delivery d
+    WHERE date_part('day', d.date::date) = date_part('day', $1::date)
+      AND date_part('month', d.date::date) = date_part('month', $1::date)
+      AND date_part('year', d.date::date) = date_part('year', $1::date)
+      AND d.courier_id IS NOT NULL
+    GROUP BY d.courier_id
+)
+SELECT c.courier_id
+FROM courier c
+         LEFT JOIN reserved_couriers ON c.courier_id = reserved_couriers.courier_id
+WHERE reserved_couriers.orders is null OR c.max_per_day > reserved_couriers.orders
+LIMIT 1
+
 	`
 	var stmt *sql.Stmt
 	var err error
@@ -233,7 +235,8 @@ func (repository *DeliveryRepository) getFreeCourierOnDate(tx *sql.Tx, date *tim
 	defer stmt.Close()
 
 	var courierId int64
-	err = stmt.QueryRow(date).Scan(&courierId)
+	err = stmt.QueryRow(fmt.Sprintf("%d-%02d-%02d",
+		date.Year(), date.Month(), date.Day())).Scan(&courierId)
 	if err != nil {
 		// constraints
 		return -1, err

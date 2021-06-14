@@ -349,6 +349,12 @@ func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 	if filter.TotalTo != nil && filter.TotalTo.String() != "0" {
 		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
 	}
+	if filter.DateFrom != "" {
+		predicate = append(predicate, sq.GtOrEq{"date": filter.DateFrom})
+	}
+	if filter.DateTo != "" {
+		predicate = append(predicate, sq.LtOrEq{"date": filter.DateTo})
+	}
 
 	qBuilder := psql.Select(columns...).From("orders").
 		Where(predicate)
@@ -487,12 +493,20 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 	}
 	total := new(big.Float)
 	for productId, quantity := range quantities {
-		_, err := repository.executeItemsAdding(tx, orderId, productId, quantity)
+		orderItem, err := repository.getItem(tx, orderId, productId)
+		var oldTotal *big.Float
+		if err != nil {
+			oldTotal = big.NewFloat(0)
+		} else {
+			oldTotal = orderItem.Total
+		}
+
+		_, err = repository.executeItemsAdding(tx, orderId, productId, quantity)
 		if err != nil {
 			log.Error(err.Error())
 			return err
 		}
-		orderItem, err := repository.getItem(tx, orderId, productId)
+		orderItem, err = repository.getItem(tx, orderId, productId)
 		if err != nil {
 			log.Error(err.Error())
 			return err
@@ -509,6 +523,7 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 			return err
 		}
 		total = total.Add(total, itemTotal)
+		total = total.Sub(total, oldTotal)
 	}
 	_, err = repository.IncreaseTotal(tx, orderId, total)
 	if err != nil {

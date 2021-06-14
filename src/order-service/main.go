@@ -46,7 +46,7 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	secureGroup.Use(errorHandler)
 
 	userRoute := secureGroup.Group("/users/:userId")
-	userRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
+	userRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, ResponseSerializer)
 
 	allUserOrdersRoute := userRoute.Group("/orders-by-filter")
 	allUserOrdersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
@@ -101,7 +101,9 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	singleUserOrderRoute.GET("/items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
 		res, err := app.GetOrderItems(userId, orderId)
-		return res, err, false
+		return gin.H{
+			"items": res,
+		}, err, false
 	}))
 	singleUserOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")

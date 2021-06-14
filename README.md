@@ -54,7 +54,7 @@ Homework Otus Architect
 * `docker build -t antlapit/otus-architect-order-service:v7 -f Dockerfile.order .`
 * `docker build -t antlapit/otus-architect-billing-service:v7 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v6 -f Dockerfile.notification .`
-* `docker build -t antlapit/otus-architect-price-service:v2 -f Dockerfile.price .`
+* `docker build -t antlapit/otus-architect-price-service:v3 -f Dockerfile.price .`
 * `docker build -t antlapit/otus-architect-product-service:v2 -f Dockerfile.product .`
 * `docker build -t antlapit/otus-architect-product-search-service:v3 -f Dockerfile.productsearch .`
 * `docker build -t antlapit/otus-architect-warehouse-service:v2 -f Dockerfile.warehouse .`

@@ -509,9 +509,11 @@ func (c *OrderApplication) GetOrderItems(id int64, orderId int64) ([]OrderItem, 
 }
 
 type OrderFilter struct {
-	OrderId   []int64    `json:"id"`
+	OrderId   []int64    `json:"orderId"`
 	UserId    []int64    `json:"userId"`
 	Status    []string   `json:"status"`
+	DateFrom  string     `json:"dateFrom"`
+	DateTo    string     `json:"dateTo"`
 	TotalFrom *big.Float `json:"totalFrom"`
 	TotalTo   *big.Float `json:"totalTo"`
 	Paging    *toolbox.Pageable

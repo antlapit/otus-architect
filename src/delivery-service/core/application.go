@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
-	"time"
 )
 
 type DeliveryApplication struct {
@@ -87,7 +86,7 @@ func (app *DeliveryApplication) onOrderRolledBack(data event.OrderRolledBack) er
 	return err
 }
 
-func (app *DeliveryApplication) ModifyDelivery(orderId int64, address string, date *time.Time) error {
+func (app *DeliveryApplication) ModifyDelivery(orderId int64, address string, date string) error {
 	_, err := app.repository.Create(orderId, address, date)
 	return err
 }

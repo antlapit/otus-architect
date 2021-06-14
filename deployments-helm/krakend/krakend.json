@@ -348,7 +348,7 @@
       }
     },
     {
-      "endpoint": "/me/orders-find-by-filter",
+      "endpoint": "/me/orders-by-filter",
       "method": "POST",
       "output_encoding": "no-op",
       "headers_to_pass": [

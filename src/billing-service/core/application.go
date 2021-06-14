@@ -55,6 +55,10 @@ func (app *BillingApplication) GetAccount(userId int64) (Account, error) {
 }
 
 func (app *BillingApplication) SubmitMoneyAdding(userId int64, req AddMoneyRequest) (interface{}, error) {
+	_, err := app.GetAccount(userId)
+	if err != nil {
+		return nil, err
+	}
 	return app.eventWriter.WriteEvent(event.EVENT_MONEY_ADDED, event.MoneyAdded{
 		UserId:     userId,
 		MoneyAdded: req.Money,
