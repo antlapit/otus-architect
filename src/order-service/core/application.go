@@ -504,6 +504,10 @@ func (c *OrderApplication) getOrderWithStatus(orderId int64, target *OrderStatus
 	}
 }
 
+func (c *OrderApplication) GetOrderItems(id int64, orderId int64) ([]OrderItem, error) {
+	return c.repository.GetAllItems(orderId)
+}
+
 type OrderFilter struct {
 	OrderId   []int64    `json:"id"`
 	UserId    []int64    `json:"userId"`

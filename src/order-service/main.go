@@ -45,9 +45,24 @@ func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.Or
 func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 	secureGroup.Use(errorHandler)
 
-	userOrdersRoute := secureGroup.Group("/users/:userId/orders")
-	userOrdersRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
+	userRoute := secureGroup.Group("/users/:userId")
+	userRoute.Use(GenericIdExtractor("userId"), checkUserPermissions, errorHandler, ResponseSerializer)
 
+	allUserOrdersRoute := userRoute.Group("/orders-by-filter")
+	allUserOrdersRoute.POST("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		var filters core.OrderFilter
+		if err := context.ShouldBindJSON(&filters); err != nil {
+			AbortErrorResponse(context, http.StatusBadRequest, err, "DA01")
+			return nil, nil, true
+		}
+
+		filters.UserId = []int64{context.GetInt64("userId")}
+
+		res, err := app.GetAllOrders(&filters)
+		return res, err, false
+	}))
+
+	userOrdersRoute := userRoute.Group("/orders")
 	userOrdersRoute.GET("", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId := context.GetInt64("userId")
 
@@ -82,6 +97,11 @@ func initApi(secureGroup *gin.RouterGroup, app *core.OrderApplication) {
 		return gin.H{
 			"eventId": res,
 		}, err, false
+	}))
+	singleUserOrderRoute.GET("/items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
+		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")
+		res, err := app.GetOrderItems(userId, orderId)
+		return res, err, false
 	}))
 	singleUserOrderRoute.POST("/add-items", NewHandlerFunc(func(context *gin.Context) (interface{}, error, bool) {
 		userId, orderId := context.GetInt64("userId"), context.GetInt64("orderId")

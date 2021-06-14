@@ -348,6 +348,40 @@
       }
     },
     {
+      "endpoint": "/me/orders-find-by-filter",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "headers_to_pass": [
+        "*"
+      ],
+      "querystring_params": [
+        "*"
+      ],
+      "backend": [
+        {
+          "host": [
+            "http://order-service:8003"
+          ],
+          "encoding": "no-op",
+          "url_pattern": "/users/{JWT.sub}/orders-by-filter"
+        }
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8001/jwk",
+          "disable_jwk_security": true,
+          "key_identify_strategy": "kid",
+          "audience": [
+            "http://arch.homework"
+          ],
+          "issuer": "http://arch.homework",
+          "roles": ["USER"],
+          "roles_key": "auth_role"
+        }
+      }
+    },
+    {
       "endpoint": "/me/orders/{orderId}",
       "method": "GET",
       "output_encoding": "json",
@@ -371,6 +405,26 @@
             },
             "github.com/devopsfaith/krakend/http": {
               "return_error_details": "orderError"
+            }
+          }
+        },
+        {
+          "host": [
+            "http://order-service:8003"
+          ],
+          "encoding": "json",
+          "url_pattern": "/users/{JWT.sub}/orders/{orderId}/items",
+          "group": "items",
+          "extra_config": {
+            "github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+              "interval": 60,
+              "timeout": 10,
+              "maxErrors": 1,
+              "name": "items",
+              "logStatusChange": true
+            },
+            "github.com/devopsfaith/krakend/http": {
+              "return_error_details": "orderItemsError"
             }
           }
         },

@@ -10,7 +10,7 @@ helm install order-service-release deployments-helm/order-service
 helm install billing-service-release deployments-helm/billing-service
 helm install notification-service-release deployments-helm/notification-service
 helm install product-service-release deployments-helm/product-service
-helm install prices-service-release deployments-helm/price-service
+helm install price-service-release deployments-helm/price-service
 helm install product-search-service-release deployments-helm/product-search-service
 helm install warehouse-service-release deployments-helm/warehouse-service
 helm install delivery-service-release deployments-helm/delivery-service

@@ -20,6 +20,7 @@ type ProductChanged struct {
 	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description" binding:"required"`
 	CategoryId  []int64 `json:"categoryId"`
+	Details     string  `json:"details"`
 }
 
 type ProductArchived struct {

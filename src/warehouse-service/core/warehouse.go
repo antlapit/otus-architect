@@ -12,7 +12,7 @@ type WarehouseRepository struct {
 
 type StoreItem struct {
 	ProductId         int64 `json:"productId" binding:"required"`
-	AvailableQuantity int64 `json:"available_quantity" binding:"required"`
+	AvailableQuantity int64 `json:"availableQuantity" binding:"required"`
 }
 
 type ProductNotFoundError struct {

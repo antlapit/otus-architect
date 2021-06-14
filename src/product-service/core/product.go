@@ -15,6 +15,7 @@ type Product struct {
 	Description string  `json:"description" bson:"description" binding:"required"`
 	Archived    bool    `json:"archived" bson:"archived"`
 	CategoryId  []int64 `json:"categoryId" bson:"categoryId"`
+	Details     string  `json:"details" bson:"details" binding:"required"`
 }
 
 const productsCollectionName = "products"
@@ -39,13 +40,14 @@ func (error *ProductInvalidError) Error() string {
 	return error.message
 }
 
-func (repository *ProductRepository) CreateOrUpdate(productId int64, name string, description string, categoryId []int64) (bool, error) {
+func (repository *ProductRepository) CreateOrUpdate(productId int64, name string, description string, categoryId []int64, details string) (bool, error) {
 	collection := repository.db.Collection(productsCollectionName)
 	product := Product{
 		Id:          productId,
 		Name:        name,
 		Description: description,
 		CategoryId:  categoryId,
+		Details:     details,
 	}
 	opts := &options.FindOneAndReplaceOptions{}
 	opts.SetUpsert(true)

@@ -3,7 +3,7 @@ create table products
     id      serial  not null
         constraint products_pk
             primary key,
-    name varchar(1000) not null,
+    name varchar(4000) not null,
     description TEXT not null,
     archived boolean  not null default false,
     category_id numeric[],
