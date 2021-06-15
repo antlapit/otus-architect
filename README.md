@@ -109,6 +109,9 @@ Homework Otus Architect
   * для БД поиска товаров `helm install postgres-exporter-product-search prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product-search.yaml`
   * для БД склада `helm install postgres-exporter-warehouse prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-warehouse.yaml`
   * для БД доставки `helm install postgres-exporter-delivery prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-delivery.yaml`
+* kafka-exporter
+  * `helm repo add gkarthiks https://gkarthiks.github.io/helm-charts`
+  * `helm install kafka-exporter gkarthiks/prometheus-kafka-exporter -f deployments/kafka-exporter.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`

@@ -314,7 +314,7 @@ func (c *OrderApplication) rollbackOrder(data event.OrderRolledBack) error {
 		log.Error(err.Error())
 		return err
 	}
-	res, err := c.repository.Rollback(order.Id)
+	res, err := c.repository.Rollback(order.Id, data.Reason)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -401,7 +401,7 @@ func (c *OrderApplication) removeOrderItems(data event.OrderItemsRemoved) error 
 func (c *OrderApplication) confirmWarehouse(data event.OrderWarehouseConfirmed) error {
 	return toolbox.ExecuteInTransaction(c.repository.DB,
 		func(tx *sql.Tx) error {
-			err := c.repository.UpdateWarehouseConfirmation(tx, data.OrderId, true)
+			err := c.repository.ConfirmWarehouse(tx, data.OrderId)
 			if err != nil {
 				return err
 			}
@@ -411,13 +411,13 @@ func (c *OrderApplication) confirmWarehouse(data event.OrderWarehouseConfirmed) 
 }
 
 func (c *OrderApplication) rejectWarehouse(data event.OrderWarehouseRejected) error {
-	return c.SubmitOrderRolledBack(data.OrderId)
+	return c.SubmitOrderRolledBack(data.OrderId, "Не хватает товаров на складе")
 }
 
 func (c *OrderApplication) confirmDelivery(data event.OrderDeliveryConfirmed) error {
 	return toolbox.ExecuteInTransaction(c.repository.DB,
 		func(tx *sql.Tx) error {
-			err := c.repository.UpdateDeliveryConfirmation(tx, data.OrderId, true)
+			err := c.repository.ConfirmDelivery(tx, data.OrderId)
 			if err != nil {
 				return err
 			}
@@ -427,14 +427,14 @@ func (c *OrderApplication) confirmDelivery(data event.OrderDeliveryConfirmed) er
 }
 
 func (c *OrderApplication) rejectDelivery(data event.OrderDeliveryRejected) error {
-	return c.SubmitOrderRolledBack(data.OrderId)
+	return c.SubmitOrderRolledBack(data.OrderId, "Невозможно осуществить доставку")
 }
 
 func (c *OrderApplication) rejectPayment(data event.PaymentRejected) error {
-	return c.SubmitOrderRolledBack(data.OrderId)
+	return c.SubmitOrderRolledBack(data.OrderId, "Недостаточно средств")
 }
 
-func (c *OrderApplication) SubmitOrderRolledBack(orderId int64) error {
+func (c *OrderApplication) SubmitOrderRolledBack(orderId int64, reason string) error {
 	order, err := c.repository.GetById(orderId)
 	if err != nil {
 		return err
