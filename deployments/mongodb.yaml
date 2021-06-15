@@ -7,6 +7,5 @@ persistence:
 auth:
   rootPassword: rBgkcVMSt5B4kd4L
 
-initdbScripts: |
-  db.createUser({ user: "products", password: "X2HNtHXVqQZf5PW9" });
-  db.createUser({ user: "prices", password: "DGYSk3taBVaNcC5N" });
+metrics:
+  enabled: true

@@ -225,7 +225,7 @@ func (repository *OrderRepository) Rollback(orderId int64, reason string) (bool,
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = $1, warehouse_confirmed = false, delivery_confirmed = false, changes = changes || '<br>' || $2
+				SET status = $1, warehouse_confirmed = false, delivery_confirmed = false, changes = changes || '<br>' || $2 || '<br>Отказ'
 				WHERE id = $3`,
 	)
 	if err != nil {

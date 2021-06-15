@@ -112,6 +112,9 @@ Homework Otus Architect
 * kafka-exporter
   * `helm repo add gkarthiks https://gkarthiks.github.io/helm-charts`
   * `helm install kafka-exporter gkarthiks/prometheus-kafka-exporter -f deployments/kafka-exporter.yaml`
+* mongodb-exporter
+  * `helm install mongodb-exporter-product prometheus-community/prometheus-mongodb-exporter -f deployments/mongodb-product.yaml`
+  * `helm install mongodb-exporter-price prometheus-community/prometheus-mongodb-exporter -f deployments/mongodb-price.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`

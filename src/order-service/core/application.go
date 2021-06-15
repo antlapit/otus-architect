@@ -450,6 +450,7 @@ func (c *OrderApplication) SubmitOrderRolledBack(orderId int64, reason string) e
 		UserId:  order.UserId,
 		Items:   eventItems,
 		Total:   order.Total,
+		Reason:  reason,
 	})
 	return err
 }
