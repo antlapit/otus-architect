@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: antlapit/otus-architect-product-search-service
   pullPolicy: IfNotPresent
-  tag: "v2"
+  tag: "v3"
 
 nameOverride: product-search-service
 fullnameOverride: "product-search-service"
@@ -62,3 +62,8 @@ kafka:
   broker:
     host: kafka-0.kafka-headless
     port: 9092
+
+redis:
+  host: redis-master
+  port: 6379
+  password: HGhZzaFTt8

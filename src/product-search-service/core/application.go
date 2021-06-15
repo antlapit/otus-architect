@@ -1,22 +1,28 @@
 package core
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
+	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/common/log"
 	"math/big"
+	"time"
 )
 
 type ProductSearchApplication struct {
 	productSearchRepository *ProductSearchRepository
+	redis                   *redis.Client
 }
 
-func NewProductSearchApplication(db *sql.DB) *ProductSearchApplication {
+func NewProductSearchApplication(db *sql.DB, redis *redis.Client) *ProductSearchApplication {
 	var productSearchRepository = &ProductSearchRepository{DB: db}
 	return &ProductSearchApplication{
 		productSearchRepository: productSearchRepository,
+		redis:                   redis,
 	}
 }
 func (app *ProductSearchApplication) ProcessEvent(id string, eventType string, data interface{}) error {
@@ -57,6 +63,12 @@ func (app *ProductSearchApplication) archiveProduct(data event.ProductArchived) 
 }
 
 func (app *ProductSearchApplication) GetAllProducts(filters *ProductFilters) (ProductPage, error) {
+	cached, err := app.checkCache(filters)
+	if err == nil {
+		fmt.Println("Get products from cache")
+		return cached, nil
+	}
+
 	count, err := app.productSearchRepository.CountByFilter(filters)
 	if err != nil {
 		return ProductPage{}, err
@@ -77,10 +89,46 @@ func (app *ProductSearchApplication) GetAllProducts(filters *ProductFilters) (Pr
 			Unpaged: true,
 		}
 	}
-	return ProductPage{
+	res := ProductPage{
 		Items: items,
 		Page:  &page,
-	}, nil
+	}
+	err = app.updateCache(filters, res)
+	if err != nil {
+		fmt.Println("Cache saving error")
+	}
+	return res, nil
+}
+
+func (app *ProductSearchApplication) checkCache(filters *ProductFilters) (ProductPage, error) {
+	ctx := context.Background()
+	key, err := app.calcKey(filters)
+	if err != nil {
+		return ProductPage{}, err
+	}
+	val, err := app.redis.Get(ctx, key).Result()
+	if err == nil {
+		var page ProductPage
+		err := json.Unmarshal([]byte(val), &page)
+		return page, err
+	} else {
+		return ProductPage{}, err
+	}
+}
+
+func (app *ProductSearchApplication) updateCache(filters *ProductFilters, page ProductPage) error {
+	ctx := context.Background()
+	key, err := app.calcKey(filters)
+	if err != nil {
+		return err
+	}
+	val, err := json.Marshal(page)
+	if err == nil {
+		d, _ := time.ParseDuration("5m")
+		return app.redis.Set(ctx, key, string(val), d).Err()
+	} else {
+		return err
+	}
 }
 
 func (app *ProductSearchApplication) modifyPrices(data event.ProductPriceChanged) error {
@@ -106,6 +154,11 @@ func (app *ProductSearchApplication) modifyQuantities(data event.ProductsBatchQu
 		}
 	}
 	return nil
+}
+
+func (app *ProductSearchApplication) calcKey(filters *ProductFilters) (string, error) {
+	b, err := json.Marshal(filters)
+	return string(b), err
 }
 
 type ProductFilters struct {

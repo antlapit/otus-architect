@@ -47,6 +47,7 @@ type OrderRolledBack struct {
 	UserId  int64  `json:"userId" binding:"required"`
 	Total   string `json:"total" binding:"required"`
 	Items   []OrderItem
+	Reason  string `json:"reason" binding:"required"`
 }
 
 type OrderRejected struct {

@@ -8,7 +8,7 @@ const (
 
 var DeliveryEvents = map[string]interface{}{
 	EVENT_ORDER_DELIVERY_CONFIRMED: OrderDeliveryConfirmed{},
-	EVENT_ORDER_WAREHOUSE_REJECTED: OrderDeliveryRejected{},
+	EVENT_ORDER_DELIVERY_REJECTED:  OrderDeliveryRejected{},
 }
 
 type OrderDeliveryConfirmed struct {

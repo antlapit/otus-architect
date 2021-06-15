@@ -101,13 +101,11 @@ func (repository *AccountRepository) GetAccountByUserId(userId int64) (Account, 
 	defer stmt.Close()
 
 	var account Account
-	var moneyVal sql.NullFloat64
-	err = stmt.QueryRow(userId).Scan(&account.Id, &account.UserId, &moneyVal)
+	err = stmt.QueryRow(userId).Scan(&account.Id, &account.UserId, &account.Money)
 	if err != nil {
 		// constraints
 		return Account{}, &AccountNotFoundError{userId: userId}
 	}
-	account.Money = big.NewFloat(moneyVal.Float64).String()
 
 	return account, nil
 }
@@ -196,9 +194,7 @@ func (repository *AccountRepository) GetBillById(billId int64) (Bill, error) {
 	defer stmt.Close()
 
 	var bill Bill
-	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(billId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-	bill.Total = big.NewFloat(totalVal.Float64).String()
+	err = stmt.QueryRow(billId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
 	if err != nil {
 		// constraints
 		return Bill{}, &BillNotFoundError{id: billId}
@@ -221,9 +217,7 @@ func (repository *AccountRepository) GetByOrderId(tx *sql.Tx, orderId int64) (Bi
 	defer stmt.Close()
 
 	var bill Bill
-	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-	bill.Total = big.NewFloat(totalVal.Float64).String()
+	err = stmt.QueryRow(orderId).Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
 	if err != nil {
 		// constraints
 		return Bill{}, &BillNotFoundError{orderId: orderId}
@@ -251,9 +245,7 @@ func (repository *AccountRepository) GetAllBillsByUserId(userId int64) ([]Bill, 
 		var result []Bill = make([]Bill, 0)
 		for rows.Next() {
 			var bill Bill
-			var totalVal sql.NullFloat64
-			rows.Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &totalVal)
-			bill.Total = big.NewFloat(totalVal.Float64).String()
+			rows.Scan(&bill.Id, &bill.AccountId, &bill.OrderId, &bill.Status, &bill.Total)
 			result = append(result, bill)
 		}
 		return result, nil

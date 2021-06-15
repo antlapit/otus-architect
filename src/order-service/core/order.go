@@ -23,6 +23,7 @@ type Order struct {
 	Date               *time.Time `json:"date" binding:"required"`
 	WarehouseConfirmed bool       `json:"warehouseConfirmed"`
 	DeliveryConfirmed  bool       `json:"deliveryConfirmed"`
+	Changes            string     `json:"changes""`
 }
 
 type OrderItem struct {
@@ -98,8 +99,8 @@ func (repository *OrderRepository) Create(userId int64, orderId int64, total *bi
 	db := repository.DB
 
 	stmt, err := db.Prepare(
-		`INSERT INTO orders(id, user_id, status, total, date) 
-				VALUES($1, $2, $3, $4, $5)
+		`INSERT INTO orders(id, user_id, status, total, date, changes) 
+				VALUES($1, $2, $3, $4, $5, 'Создан заказ')
 				ON CONFLICT (id) DO UPDATE
 				SET user_id = $2, status = $3, total = $4`,
 	)
@@ -125,7 +126,7 @@ func (repository *OrderRepository) GetById(orderId int64) (Order, error) {
 }
 
 func (repository *OrderRepository) GetByIdInTransaction(tx *sql.Tx, orderId int64) (Order, error) {
-	q := "SELECT id, user_id, status, total, date, warehouse_confirmed, delivery_confirmed FROM orders WHERE id = $1"
+	q := "SELECT id, user_id, status, total, date, warehouse_confirmed, delivery_confirmed, changes FROM orders WHERE id = $1"
 	var stmt *sql.Stmt
 	var err error
 	if tx == nil {
@@ -140,9 +141,7 @@ func (repository *OrderRepository) GetByIdInTransaction(tx *sql.Tx, orderId int6
 	defer stmt.Close()
 
 	var order Order
-	var totalVal sql.NullFloat64
-	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date, &order.WarehouseConfirmed, &order.DeliveryConfirmed)
-	order.Total = big.NewFloat(totalVal.Float64).String()
+	err = stmt.QueryRow(orderId).Scan(&order.Id, &order.UserId, &order.Status, &order.Total, &order.Date, &order.WarehouseConfirmed, &order.DeliveryConfirmed, &order.Changes)
 	if err != nil {
 		// constraints
 		return Order{}, &OrderNotFoundError{id: orderId}
@@ -172,12 +171,10 @@ func (repository *OrderRepository) GetByFilter(filter *OrderFilter) ([]Order, er
 		var result = make([]Order, 0)
 		for rows.Next() {
 			var order Order
-			var totalVal sql.NullFloat64
-			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &totalVal, &order.Date)
+			err = rows.Scan(&order.Id, &order.UserId, &order.Status, &order.Total, &order.Date)
 			if err != nil {
 				return []Order{}, err
 			}
-			order.Total = big.NewFloat(totalVal.Float64).String()
 			result = append(result, order)
 		}
 		return result, nil
@@ -189,7 +186,7 @@ func (repository *OrderRepository) Confirm(orderId int64) (bool, error) {
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = $1, warehouse_confirmed = true, delivery_confirmed = true
+				SET status = $1, warehouse_confirmed = true, delivery_confirmed = true, changes = changes || '<br>Заказ ожидает оплаты'
 				WHERE id = $2`,
 	)
 	if err != nil {
@@ -212,31 +209,31 @@ func (repository *OrderRepository) Confirm(orderId int64) (bool, error) {
 }
 
 func (repository *OrderRepository) Reject(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusRejected)
+	return repository.updateOrderState(orderId, StatusRejected, "<br>Заказ отменен")
 }
 
 func (repository *OrderRepository) Complete(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusCompleted)
+	return repository.updateOrderState(orderId, StatusCompleted, "<br>Заказ подтвержден")
 }
 
 func (repository *OrderRepository) Prepare(orderId int64) (bool, error) {
-	return repository.updateOrderState(orderId, StatusPrepared)
+	return repository.updateOrderState(orderId, StatusPrepared, "<br>Оформление заказа")
 }
 
-func (repository *OrderRepository) Rollback(orderId int64) (bool, error) {
+func (repository *OrderRepository) Rollback(orderId int64, reason string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = $1, warehouse_confirmed = false, delivery_confirmed = false
-				WHERE id = $2`,
+				SET status = $1, warehouse_confirmed = false, delivery_confirmed = false, changes = changes || '<br>' || $2 || '<br>Отказ'
+				WHERE id = $3`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(StatusRolledBack.code, orderId)
+	res, err := stmt.Exec(StatusRolledBack.code, reason, orderId)
 	if err != nil {
 		return false, err
 	}
@@ -250,20 +247,20 @@ func (repository *OrderRepository) Rollback(orderId int64) (bool, error) {
 	}
 }
 
-func (repository *OrderRepository) updateOrderState(orderId int64, toState *OrderStatus) (bool, error) {
+func (repository *OrderRepository) updateOrderState(orderId int64, toState *OrderStatus, changes string) (bool, error) {
 	db := repository.DB
 
 	stmt, err := db.Prepare(
 		`UPDATE orders
-				SET status = $1
-				WHERE id = $2`,
+				SET status = $1, changes = changes || $2
+				WHERE id = $3`,
 	)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(toState.code, orderId)
+	res, err := stmt.Exec(toState.code, changes, orderId)
 	if err != nil {
 		return false, err
 	}
@@ -352,6 +349,12 @@ func prepareQuery(columns []string, filter *OrderFilter) sq.SelectBuilder {
 	}
 	if filter.TotalTo != nil && filter.TotalTo.String() != "0" {
 		predicate = append(predicate, sq.LtOrEq{"total": filter.TotalTo.String()})
+	}
+	if filter.DateFrom != "" {
+		predicate = append(predicate, sq.GtOrEq{"date": filter.DateFrom})
+	}
+	if filter.DateTo != "" {
+		predicate = append(predicate, sq.LtOrEq{"date": filter.DateTo})
 	}
 
 	qBuilder := psql.Select(columns...).From("orders").
@@ -491,12 +494,20 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 	}
 	total := new(big.Float)
 	for productId, quantity := range quantities {
-		_, err := repository.executeItemsAdding(tx, orderId, productId, quantity)
+		orderItem, err := repository.getItem(tx, orderId, productId)
+		var oldTotal *big.Float
+		if err != nil {
+			oldTotal = big.NewFloat(0)
+		} else {
+			oldTotal = orderItem.Total
+		}
+
+		_, err = repository.executeItemsAdding(tx, orderId, productId, quantity)
 		if err != nil {
 			log.Error(err.Error())
 			return err
 		}
-		orderItem, err := repository.getItem(tx, orderId, productId)
+		orderItem, err = repository.getItem(tx, orderId, productId)
 		if err != nil {
 			log.Error(err.Error())
 			return err
@@ -513,6 +524,7 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 			return err
 		}
 		total = total.Add(total, itemTotal)
+		total = total.Sub(total, oldTotal)
 	}
 	_, err = repository.IncreaseTotal(tx, orderId, total)
 	if err != nil {
@@ -522,10 +534,10 @@ func (repository *OrderRepository) modifyItemsQuantity(tx *sql.Tx, orderId int64
 	return err
 }
 
-func (repository *OrderRepository) UpdateWarehouseConfirmation(tx *sql.Tx, orderId int64, warehouseConfirmation bool) error {
+func (repository *OrderRepository) ConfirmWarehouse(tx *sql.Tx, orderId int64) error {
 	stmt, err := tx.Prepare(
 		`UPDATE orders
-				SET warehouse_confirmed = $1
+				SET warehouse_confirmed = $1, changes = changes || '<br>Склад подтвердил заказ'
 				WHERE id = $2`,
 	)
 	if err != nil {
@@ -533,7 +545,7 @@ func (repository *OrderRepository) UpdateWarehouseConfirmation(tx *sql.Tx, order
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(warehouseConfirmation, orderId)
+	res, err := stmt.Exec(true, orderId)
 	if err != nil {
 		return err
 	}
@@ -547,10 +559,10 @@ func (repository *OrderRepository) UpdateWarehouseConfirmation(tx *sql.Tx, order
 	}
 }
 
-func (repository *OrderRepository) UpdateDeliveryConfirmation(tx *sql.Tx, orderId int64, deliveryConfirmation bool) error {
+func (repository *OrderRepository) ConfirmDelivery(tx *sql.Tx, orderId int64) error {
 	stmt, err := tx.Prepare(
 		`UPDATE orders
-				SET delivery_confirmed = $1
+				SET delivery_confirmed = $1, changes = changes || '<br>Подтверждена доставка'
 				WHERE id = $2`,
 	)
 	if err != nil {
@@ -558,7 +570,7 @@ func (repository *OrderRepository) UpdateDeliveryConfirmation(tx *sql.Tx, orderI
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(deliveryConfirmation, orderId)
+	res, err := stmt.Exec(true, orderId)
 	if err != nil {
 		return err
 	}

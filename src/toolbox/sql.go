@@ -53,11 +53,11 @@ func (lk InIntegerArray) ToSql() (sql string, args []interface{}, err error) {
 }
 
 func IntArrayPlaceholder(count int) string {
-	return fmt.Sprintf("ARRAY[%s]", PlaceholdersWithSuffix(count, "::integer"))
+	return fmt.Sprintf("ARRAY[%s]", PlaceholdersWithSuffix(count, "::numeric"))
 }
 
 func IntArrayNumericPlaceholder(startNum int, count int) string {
-	return fmt.Sprintf("ARRAY[%s]", NumericPlaceholdersWithSuffix(startNum, count, "::integer"))
+	return fmt.Sprintf("ARRAY[%s]", NumericPlaceholdersWithSuffix(startNum, count, "::numeric"))
 }
 
 func PlaceholdersWithSuffix(count int, suffix string) string {

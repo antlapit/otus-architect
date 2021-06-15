@@ -25,18 +25,17 @@ func (p *ProductPrices) getPriceByQuantity(quantity int64) *big.Float {
 	}
 
 	sort.Slice(p.AdditionalPrices, func(i, j int) bool {
-		return p.AdditionalPrices[i].Quantity < p.AdditionalPrices[j].Quantity
+		return p.AdditionalPrices[i].Quantity > p.AdditionalPrices[j].Quantity
 	})
 
 	for _, price := range p.AdditionalPrices {
-		if quantity > price.Quantity {
+		if quantity >= price.Quantity {
 			p, _ := new(big.Float).SetString(price.Value)
 			return p
 		}
 	}
 	price, _ := new(big.Float).SetString(p.BasePrice.Value)
 	return price
-
 }
 
 type Price struct {

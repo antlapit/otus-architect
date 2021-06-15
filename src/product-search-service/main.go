@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/product-search-service/core"
 	. "github.com/antlapit/otus-architect/toolbox"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/lib/pq"
 	"net/http"
 	"os"
@@ -23,11 +25,25 @@ func main() {
 
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 
-		var app = core.NewProductSearchApplication(db)
+		var redis = NewDefaultRedis()
+		var app = core.NewProductSearchApplication(db, redis)
 		initListeners(kafka, eventsMarshaller, app)
 		initApi(publicGroup, app)
 		engine.Run(":8007")
 	}
+}
+
+func NewDefaultRedis() *redis.Client {
+	host := os.Getenv("REDIS_HOST")
+	port := os.Getenv("REDIS_PORT")
+	password := os.Getenv("REDIS_PASSWORD")
+	addr := fmt.Sprintf("%s:%s", host, port)
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       0, // use default DB
+	})
+	return rdb
 }
 
 func initListeners(kafka *KafkaServer, marshaller *EventMarshaller, app *core.ProductSearchApplication) {

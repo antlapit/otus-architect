@@ -1,0 +1,7 @@
+kafkaServer:
+  - kafka-0.kafka-headless:9092
+
+prometheus:
+  serviceMonitor:
+    namespace: alapitskii
+    interval: 15s

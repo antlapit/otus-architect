@@ -1,0 +1,6 @@
+mongodb:
+  uri: "mongodb://products:X2HNtHXVqQZf5PW9@mongodb:27017/products"
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "metrics"

@@ -19,6 +19,7 @@ type Product struct {
 	CategoryId  []int64    `json:"categoryId" pg:",array"`
 	MinPrice    *big.Float `json:"minPrice" binding:"required"`
 	MaxPrice    *big.Float `json:"maxPrice" binding:"required"`
+	Quantity    int64      `json:"quantity"`
 }
 
 var DbFieldAdditionalMapping = map[string]string{
@@ -125,7 +126,7 @@ func (repository *ProductSearchRepository) CountByFilter(filter *ProductFilters)
 func (repository *ProductSearchRepository) GetByFilter(filter *ProductFilters) ([]Product, error) {
 	db := repository.DB
 
-	queryBuilder := prepareQuery([]string{"id", "name", "description", "archived", "category_id", "min_price", "max_price"}, filter)
+	queryBuilder := prepareQuery([]string{"id", "name", "description", "archived", "category_id", "min_price", "max_price", "quantity"}, filter)
 	queryBuilder = toolbox.AddPaging(queryBuilder, filter.Paging, DbFieldAdditionalMapping)
 	query, values, err := queryBuilder.ToSql()
 
@@ -145,7 +146,7 @@ func (repository *ProductSearchRepository) GetByFilter(filter *ProductFilters) (
 			var product Product
 			var minVal sql.NullFloat64
 			var maxVal sql.NullFloat64
-			err = rows.Scan(&product.Id, &product.Name, &product.Description, &product.Archived, (*pq.Int64Array)(&product.CategoryId), &minVal, &maxVal)
+			err = rows.Scan(&product.Id, &product.Name, &product.Description, &product.Archived, (*pq.Int64Array)(&product.CategoryId), &minVal, &maxVal, &product.Quantity)
 			if err != nil {
 				return []Product{}, err
 			}

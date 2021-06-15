@@ -9,7 +9,6 @@ import (
 	_ "github.com/lib/pq"
 	"net/http"
 	"os"
-	"time"
 )
 
 func main() {
@@ -21,7 +20,7 @@ func main() {
 	} else {
 		engine, _, secureGroup, _ := InitGinDefault(dbConfig, nil)
 
-		kafka := InitKafkaDefault()
+		kafka := InitKafkaWithSqlInbox(db)
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 		eventWriter := kafka.StartNewWriter(event.TOPIC_DELIVERY, eventsMarshaller)
 
@@ -85,8 +84,8 @@ func errorHandler(context *gin.Context) {
 }
 
 type DeliveryChangeData struct {
-	Address string     `json:"address" binding:"required"`
-	Date    *time.Time `json:"date" binding:"required"`
+	Address string `json:"address" binding:"required"`
+	Date    string `json:"date" binding:"required"`
 }
 
 func checkUserPermissions(context *gin.Context) {

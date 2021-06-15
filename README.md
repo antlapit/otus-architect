@@ -51,14 +51,14 @@ Homework Otus Architect
 * `cd src`
 * `docker build -t antlapit/otus-architect-auth-service:v5 -f Dockerfile.auth .`
 * `docker build -t antlapit/otus-architect-user-profile-service:v5 -f Dockerfile.users .`
-* `docker build -t antlapit/otus-architect-order-service:v6 -f Dockerfile.order .`
-* `docker build -t antlapit/otus-architect-billing-service:v6 -f Dockerfile.billing .`
+* `docker build -t antlapit/otus-architect-order-service:v7 -f Dockerfile.order .`
+* `docker build -t antlapit/otus-architect-billing-service:v7 -f Dockerfile.billing .`
 * `docker build -t antlapit/otus-architect-notification-service:v6 -f Dockerfile.notification .`
-* `docker build -t antlapit/otus-architect-price-service:v2 -f Dockerfile.price .`
-* `docker build -t antlapit/otus-architect-product-service:v1 -f Dockerfile.product .`
-* `docker build -t antlapit/otus-architect-product-search-service:v2 -f Dockerfile.productsearch .`
-* `docker build -t antlapit/otus-architect-warehouse-service:v1 -f Dockerfile.warehouse .`
-* `docker build -t antlapit/otus-architect-delivery-service:v1 -f Dockerfile.delivery .`
+* `docker build -t antlapit/otus-architect-price-service:v3 -f Dockerfile.price .`
+* `docker build -t antlapit/otus-architect-product-service:v2 -f Dockerfile.product .`
+* `docker build -t antlapit/otus-architect-product-search-service:v3 -f Dockerfile.productsearch .`
+* `docker build -t antlapit/otus-architect-warehouse-service:v2 -f Dockerfile.warehouse .`
+* `docker build -t antlapit/otus-architect-delivery-service:v2 -f Dockerfile.delivery .`
 
 ## API
 * в каталоге **examples** есть Postman коллекция
@@ -109,6 +109,12 @@ Homework Otus Architect
   * для БД поиска товаров `helm install postgres-exporter-product-search prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-product-search.yaml`
   * для БД склада `helm install postgres-exporter-warehouse prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-warehouse.yaml`
   * для БД доставки `helm install postgres-exporter-delivery prometheus-community/prometheus-postgres-exporter -f deployments/postgresql-exporter-delivery.yaml`
+* kafka-exporter
+  * `helm repo add gkarthiks https://gkarthiks.github.io/helm-charts`
+  * `helm install kafka-exporter gkarthiks/prometheus-kafka-exporter -f deployments/kafka-exporter.yaml`
+* mongodb-exporter
+  * `helm install mongodb-exporter-product prometheus-community/prometheus-mongodb-exporter -f deployments/mongodb-product.yaml`
+  * `helm install mongodb-exporter-price prometheus-community/prometheus-mongodb-exporter -f deployments/mongodb-price.yaml`
   
 ### Prometheus & Grafana
 * форвардинг портов grafana `kubectl port-forward service/prom-grafana 9000:80`

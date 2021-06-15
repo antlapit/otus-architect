@@ -20,7 +20,7 @@ func main() {
 	} else {
 		engine, _, secureGroup, publicGroup := InitGinDefault(dbConfig, nil)
 
-		kafka := InitKafkaDefault()
+		kafka := InitKafkaWithSqlInbox(db)
 		eventsMarshaller := NewEventMarshaller(event.AllEvents)
 		warehouseEventWriter := kafka.StartNewWriter(event.TOPIC_WAREHOUSE, eventsMarshaller)
 

@@ -10,13 +10,18 @@ import (
 type WarehouseApplication struct {
 	repository  *WarehouseRepository
 	eventWriter *toolbox.EventWriter
+	outbox      *toolbox.Outbox
 }
 
 func NewWarehouseApplication(db *sql.DB, writer *toolbox.EventWriter) *WarehouseApplication {
 	var repository = &WarehouseRepository{DB: db}
+	var outbox = toolbox.NewOutbox(db, writer)
+	outbox.Start()
+
 	return &WarehouseApplication{
 		repository:  repository,
 		eventWriter: writer,
+		outbox:      outbox,
 	}
 }
 
@@ -39,11 +44,12 @@ func (app *WarehouseApplication) ModifyProductChange(productId int64, quantity i
 	return toolbox.ExecuteInTransaction(app.repository.DB,
 		func(tx *sql.Tx) error {
 			_, err := app.repository.updateProductAvailableQuantity(tx, productId, quantity)
-			// TODO outbox
-			app.submitProductQuantityChanged(map[int64]int64{
+			if err != nil {
+				return err
+			}
+			return app.submitProductQuantityChanged(tx, map[int64]int64{
 				productId: quantity,
 			}, 1)
-			return err
 		},
 	)
 }
@@ -57,7 +63,7 @@ func (app *WarehouseApplication) modifyProductData(data event.ProductChanged) er
 	return err
 }
 
-func (app *WarehouseApplication) submitProductQuantityChanged(quantities map[int64]int64, sign int64) error {
+func (app *WarehouseApplication) submitProductQuantityChanged(tx *sql.Tx, quantities map[int64]int64, sign int64) error {
 	changes := []event.ProductQuantityChange{}
 	for productId, quantityChange := range quantities {
 		changes = append(changes, event.ProductQuantityChange{
@@ -65,10 +71,9 @@ func (app *WarehouseApplication) submitProductQuantityChanged(quantities map[int
 			Quantity:  quantityChange * sign,
 		})
 	}
-	_, err := app.eventWriter.WriteEvent(event.EVENT_PRODUCT_QUANTITY_CHANGED, event.ProductsBatchQuantityChanged{
+	return app.outbox.SubmitEvent(tx, event.EVENT_PRODUCT_QUANTITY_CHANGED, event.ProductsBatchQuantityChanged{
 		Changes: changes,
 	})
-	return err
 }
 
 func (app *WarehouseApplication) submitWarehouseRejected(orderId int64, userId int64) error {
@@ -79,12 +84,11 @@ func (app *WarehouseApplication) submitWarehouseRejected(orderId int64, userId i
 	return err
 }
 
-func (app *WarehouseApplication) submitWarehouseConfirmed(orderId int64, userId int64) error {
-	_, err := app.eventWriter.WriteEvent(event.EVENT_ORDER_WAREHOUSE_CONFIRMED, event.OrderWarehouseConfirmed{
+func (app *WarehouseApplication) submitWarehouseConfirmed(tx *sql.Tx, orderId int64, userId int64) error {
+	return app.outbox.SubmitEvent(tx, event.EVENT_ORDER_WAREHOUSE_CONFIRMED, event.OrderWarehouseConfirmed{
 		OrderId: orderId,
 		UserId:  userId,
 	})
-	return err
 }
 
 func (app *WarehouseApplication) onOrderPrepared(data event.OrderPrepared) error {
@@ -97,10 +101,13 @@ func (app *WarehouseApplication) onOrderPrepared(data event.OrderPrepared) error
 				return nil
 			}
 			reserveErr := app.repository.reserveProducts(tx, data.OrderId, m)
-			// TODO outbox
 			if reserveErr == nil {
-				app.submitWarehouseConfirmed(data.OrderId, data.UserId)
-				return app.submitProductQuantityChanged(m, -1)
+				whErr := app.submitWarehouseConfirmed(tx, data.OrderId, data.UserId)
+				if whErr == nil {
+					return app.submitProductQuantityChanged(tx, m, -1)
+				} else {
+					return whErr
+				}
 			} else {
 				return reserveErr
 			}
@@ -122,9 +129,8 @@ func (app *WarehouseApplication) onOrderRolledBack(data event.OrderRolledBack) e
 				return nil
 			}
 			freeErr := app.repository.freeProducts(tx, data.OrderId, m)
-			// TODO outbox
 			if freeErr == nil {
-				return app.submitProductQuantityChanged(m, 1)
+				return app.submitProductQuantityChanged(tx, m, 1)
 			} else {
 				return freeErr
 			}

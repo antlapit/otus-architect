@@ -108,7 +108,12 @@ func (app *PriceApplication) CalculateTotal(req rest.CalculationRequest) (*rest.
 		quantity := req[key]
 		price := mappedPrices[key]
 		value := price.getPriceByQuantity(quantity)
-		multipliedVal := big.NewFloat(0).Mul(value, big.NewFloat(float64(quantity))).SetPrec(2)
+		qConv := big.NewFloat(0)
+		_, b := qConv.SetString(strconv.FormatInt(quantity, 10))
+		if !b {
+			continue
+		}
+		multipliedVal := big.NewFloat(0).Mul(value, qConv)
 		basePrice, _ := new(big.Float).SetString(price.BasePrice.Value)
 		result.Items[key] = rest.ItemCalculationResult{
 			BasePrice: basePrice.String(),

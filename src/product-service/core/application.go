@@ -44,7 +44,7 @@ func (app *ProductApplication) createOrUpdateProduct(data event.ProductChanged) 
 	if data.CategoryId != nil {
 		wrappedArray = data.CategoryId
 	}
-	success, err := app.productRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description, wrappedArray)
+	success, err := app.productRepository.CreateOrUpdate(data.ProductId, data.Name, data.Description, wrappedArray, data.Details)
 	if err != nil || !success {
 		log.Error("Error creating product")
 	}
@@ -70,6 +70,7 @@ func (app *ProductApplication) SubmitProductCreation(data ProductData) (interfac
 		Name:        data.Name,
 		Description: data.Description,
 		CategoryId:  data.CategoryId,
+		Details:     data.Details,
 	})
 }
 
@@ -84,6 +85,7 @@ func (app *ProductApplication) SubmitProductChange(productId int64, data Product
 		Name:        data.Name,
 		Description: data.Description,
 		CategoryId:  data.CategoryId,
+		Details:     data.Details,
 	})
 }
 
@@ -126,6 +128,7 @@ type ProductData struct {
 	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description" binding:"required"`
 	CategoryId  []int64 `json:"categoryId"`
+	Details     string  `json:"details"`
 }
 
 type CategoryData struct {

@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"github.com/antlapit/otus-architect/api/event"
 	"github.com/antlapit/otus-architect/toolbox"
-	"time"
 )
 
 type DeliveryApplication struct {
 	repository  *DeliveryRepository
 	eventWriter *toolbox.EventWriter
+	outbox      *toolbox.Outbox
 }
 
 func NewDeliveryApplication(db *sql.DB, writer *toolbox.EventWriter) *DeliveryApplication {
 	var repository = &DeliveryRepository{DB: db}
+	var outbox = toolbox.NewOutbox(db, writer)
+	outbox.Start()
+
 	return &DeliveryApplication{
 		repository:  repository,
 		eventWriter: writer,
+		outbox:      outbox,
 	}
 }
 
@@ -42,14 +46,6 @@ func (app *DeliveryApplication) submitDeliveryRejected(orderId int64, userId int
 	return err
 }
 
-func (app *DeliveryApplication) submitDeliveryConfirmed(orderId int64, userId int64) error {
-	_, err := app.eventWriter.WriteEvent(event.EVENT_ORDER_DELIVERY_CONFIRMED, event.OrderDeliveryConfirmed{
-		OrderId: orderId,
-		UserId:  userId,
-	})
-	return err
-}
-
 func (app *DeliveryApplication) onOrderPrepared(data event.OrderPrepared) error {
 	err := toolbox.ExecuteInTransaction(app.repository.DB,
 		func(tx *sql.Tx) error {
@@ -59,9 +55,11 @@ func (app *DeliveryApplication) onOrderPrepared(data event.OrderPrepared) error 
 				return nil
 			}
 			reserveErr := app.repository.reserveCourier(tx, data.OrderId)
-			// TODO outbox
 			if reserveErr == nil {
-				return app.submitDeliveryConfirmed(data.OrderId, data.UserId)
+				return app.outbox.SubmitEvent(tx, event.EVENT_ORDER_DELIVERY_CONFIRMED, event.OrderDeliveryConfirmed{
+					OrderId: data.OrderId,
+					UserId:  data.UserId,
+				})
 			} else {
 				return reserveErr
 			}
@@ -82,14 +80,13 @@ func (app *DeliveryApplication) onOrderRolledBack(data event.OrderRolledBack) er
 				return nil
 			}
 			freeErr := app.repository.freeCourier(tx, data.OrderId)
-			// TODO outbox
 			return freeErr
 		},
 	)
 	return err
 }
 
-func (app *DeliveryApplication) ModifyDelivery(orderId int64, address string, date *time.Time) error {
+func (app *DeliveryApplication) ModifyDelivery(orderId int64, address string, date string) error {
 	_, err := app.repository.Create(orderId, address, date)
 	return err
 }
