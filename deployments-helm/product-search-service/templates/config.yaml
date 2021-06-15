@@ -13,6 +13,8 @@ data:
   AUTH_AUDIENCE: {{ .Values.jwt.audience | quote }}
   KAFKA_BROKER_HOST: {{ .Values.kafka.broker.host | quote }}
   KAFKA_BROKER_PORT: {{ .Values.kafka.broker.port | quote }}
+  REDIS_HOST: {{ .Values.redis.host | quote }}
+  REDIS_PORT: {{ .Values.redis.port | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -22,3 +24,4 @@ type: Opaque
 data:
   DB_USER: {{ .Values.postgresql.postgresqlUsername | b64enc | quote }}
   DB_PASSWORD: {{ .Values.postgresql.postgresqlPassword | b64enc | quote }}
+  REDIS_PASSWORD: {{ .Values.redis.password | b64enc | quote }}

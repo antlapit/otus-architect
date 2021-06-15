@@ -62,3 +62,8 @@ kafka:
   broker:
     host: kafka-0.kafka-headless
     port: 9092
+
+redis:
+  host: redis-master
+  port: 6379
+  password: HGhZzaFTt8

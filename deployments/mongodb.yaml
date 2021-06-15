@@ -6,6 +6,3 @@ persistence:
 
 auth:
   rootPassword: rBgkcVMSt5B4kd4L
-
-metrics:
-  enabled: true

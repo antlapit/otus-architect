@@ -38,6 +38,11 @@ spec:
                 secretKeyRef:
                   name: product-search-secret
                   key: DB_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: product-search-secret
+                  key: REDIS_PASSWORD
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
@@ -88,6 +93,16 @@ spec:
                 configMapKeyRef:
                   name: product-search-config
                   key: KAFKA_BROKER_PORT
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: product-search-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: product-search-config
+                  key: REDIS_PORT
           livenessProbe:
             httpGet:
               path: {{ .Values.health.path }}
